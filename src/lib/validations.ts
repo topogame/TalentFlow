@@ -35,6 +35,91 @@ export const updateUserSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+// Candidate
+const languageSchema = z.object({
+  language: z.string().min(1).max(50),
+  level: z.enum(["beginner", "intermediate", "advanced", "native"]),
+});
+
+export const createCandidateSchema = z.object({
+  firstName: z.string().min(1, "Ad gerekli").max(100),
+  lastName: z.string().min(1, "Soyad gerekli").max(100),
+  email: z.string().email("Geçerli bir e-posta girin").max(255).optional().or(z.literal("")),
+  phone: z.string().max(30).optional().or(z.literal("")),
+  linkedinUrl: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")),
+  educationLevel: z.string().max(100).optional().or(z.literal("")),
+  totalExperienceYears: z.coerce.number().int().min(0).max(50).optional().nullable(),
+  currentSector: z.string().max(200).optional().or(z.literal("")),
+  currentTitle: z.string().max(200).optional().or(z.literal("")),
+  salaryExpectation: z.coerce.number().min(0).optional().nullable(),
+  salaryCurrency: z.enum(["TRY", "USD", "EUR"]).optional(),
+  salaryType: z.enum(["net", "gross"]).optional().nullable(),
+  country: z.string().max(100).optional().or(z.literal("")),
+  city: z.string().max(100).optional().or(z.literal("")),
+  isRemoteEligible: z.boolean().optional(),
+  isHybridEligible: z.boolean().optional(),
+  languages: z.array(languageSchema).optional(),
+});
+
+export const updateCandidateSchema = createCandidateSchema.partial();
+
+export const candidateListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().optional(),
+  sector: z.string().optional(),
+  city: z.string().optional(),
+  status: z.enum(["active", "passive"]).optional().default("active"),
+  minExperience: z.coerce.number().int().min(0).optional(),
+  maxExperience: z.coerce.number().int().max(50).optional(),
+  sort: z.string().optional().default("createdAt"),
+  order: z.enum(["asc", "desc"]).optional().default("desc"),
+});
+
+export const duplicateCheckSchema = z.object({
+  linkedinUrl: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
+export const noteSchema = z.object({
+  content: z.string().min(1, "Not içeriği gerekli").max(5000),
+});
+
+// Firm
+export const createFirmSchema = z.object({
+  name: z.string().min(1, "Firma adı gerekli").max(255),
+  sector: z.string().max(200).optional().or(z.literal("")),
+  companySize: z.string().max(50).optional().or(z.literal("")),
+  city: z.string().max(100).optional().or(z.literal("")),
+  country: z.string().max(100).optional().or(z.literal("")),
+  website: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")),
+  notes: z.string().optional().or(z.literal("")),
+});
+
+export const updateFirmSchema = createFirmSchema.partial();
+
+// Position
+export const createPositionSchema = z.object({
+  firmId: z.string().uuid("Geçerli bir firma seçin"),
+  title: z.string().min(1, "Pozisyon başlığı gerekli").max(255),
+  department: z.string().max(200).optional().or(z.literal("")),
+  requiredExperienceYears: z.coerce.number().int().min(0).max(50).optional().nullable(),
+  salaryMin: z.coerce.number().min(0).optional().nullable(),
+  salaryMax: z.coerce.number().min(0).optional().nullable(),
+  salaryCurrency: z.enum(["TRY", "USD", "EUR"]).optional(),
+  workModel: z.enum(["office", "remote", "hybrid"]).optional().nullable(),
+  city: z.string().max(100).optional().or(z.literal("")),
+  country: z.string().max(100).optional().or(z.literal("")),
+  description: z.string().optional().or(z.literal("")),
+  requirements: z.string().optional().or(z.literal("")),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
+});
+
+export const updatePositionSchema = createPositionSchema.partial();
+
 // Pagination
 export const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
