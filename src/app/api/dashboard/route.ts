@@ -20,6 +20,9 @@ export async function GET() {
     openPositions,
     weekInterviews,
     activeProcesses,
+    pipelineDistribution,
+    recentActivity,
+    upcomingInterviews,
   ] = await Promise.all([
     prisma.candidate.count({
       where: { status: "active" },
@@ -35,6 +38,49 @@ export async function GET() {
     prisma.process.count({
       where: { closedAt: null },
     }),
+    prisma.process.groupBy({
+      by: ["stage"],
+      where: { closedAt: null },
+      _count: { id: true },
+    }),
+    prisma.processStageHistory.findMany({
+      take: 10,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        fromStage: true,
+        toStage: true,
+        createdAt: true,
+        changedBy: { select: { firstName: true, lastName: true } },
+        process: {
+          select: {
+            id: true,
+            candidate: { select: { firstName: true, lastName: true } },
+            position: { select: { title: true } },
+            firm: { select: { name: true } },
+          },
+        },
+      },
+    }),
+    prisma.interview.findMany({
+      where: { scheduledAt: { gte: now }, isCompleted: false },
+      take: 5,
+      orderBy: { scheduledAt: "asc" },
+      select: {
+        id: true,
+        scheduledAt: true,
+        type: true,
+        durationMinutes: true,
+        process: {
+          select: {
+            id: true,
+            candidate: { select: { firstName: true, lastName: true } },
+            firm: { select: { name: true } },
+            position: { select: { title: true } },
+          },
+        },
+      },
+    }),
   ]);
 
   return NextResponse.json(
@@ -43,6 +89,12 @@ export async function GET() {
       openPositions,
       weekInterviews,
       activeProcesses,
+      pipelineDistribution: pipelineDistribution.map((p) => ({
+        stage: p.stage,
+        count: p._count.id,
+      })),
+      recentActivity,
+      upcomingInterviews,
     })
   );
 }

@@ -448,8 +448,9 @@ async function main() {
     { candidateId: candidates[7].id, firmId: firms[0].id, positionId: positions[0].id, stage: "pool", fitnessScore: 2 },
   ];
 
+  const createdProcesses = [];
   for (const p of processesData) {
-    await prisma.process.create({
+    const proc = await prisma.process.create({
       data: {
         ...p,
         stage: p.stage as any,
@@ -457,8 +458,41 @@ async function main() {
         createdById: admin.id,
       },
     });
+    createdProcesses.push({ ...proc, targetStage: p.stage });
   }
   console.log(`${processesData.length} processes created.`);
+
+  // ─── Process Stage History ───
+  // Simulate realistic stage transitions for each process
+  const stagePath: Record<string, string[]> = {
+    pool: ["pool"],
+    initial_interview: ["pool", "initial_interview"],
+    submitted: ["pool", "initial_interview", "submitted"],
+    interview: ["pool", "initial_interview", "submitted", "interview"],
+  };
+
+  const now = new Date();
+  for (const proc of createdProcesses) {
+    const stages = stagePath[proc.targetStage] || ["pool"];
+    for (let i = 0; i < stages.length; i++) {
+      const daysAgo = (stages.length - i) * 3; // each transition ~3 days apart
+      const createdAt = new Date(now);
+      createdAt.setDate(createdAt.getDate() - daysAgo);
+      createdAt.setHours(9 + i, 30, 0, 0);
+
+      await prisma.processStageHistory.create({
+        data: {
+          processId: proc.id,
+          fromStage: i === 0 ? null : stages[i - 1],
+          toStage: stages[i],
+          note: i === 0 ? "Süreç başlatıldı" : undefined,
+          changedById: i % 2 === 0 ? admin.id : consultant.id,
+          createdAt,
+        },
+      });
+    }
+  }
+  console.log("Process stage history created.");
 
   // ─── Interviews ───
   const tomorrow = new Date();
@@ -496,13 +530,76 @@ async function main() {
           scheduledAt: dayAfter,
           durationMinutes: 45,
           type: "face_to_face",
-          meetingLink: "https://teams.microsoft.com/meeting123",
+          location: "FinansPlus Genel Müdürlük, Levent",
           clientParticipants: "HR Direktörü, Risk Müdürü",
           notes: "İK ve teknik değerlendirme",
           createdById: admin.id,
         },
       });
     }
+
+    // Extra interviews for a fuller calendar
+    const threeDays = new Date();
+    threeDays.setDate(threeDays.getDate() + 3);
+    threeDays.setHours(11, 0, 0, 0);
+
+    const fiveDays = new Date();
+    fiveDays.setDate(fiveDays.getDate() + 5);
+    fiveDays.setHours(15, 30, 0, 0);
+
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    nextWeek.setHours(10, 0, 0, 0);
+
+    // Get submitted processes too
+    const submittedProcesses = await prisma.process.findMany({
+      where: { stage: "submitted" },
+      select: { id: true },
+    });
+
+    if (submittedProcesses.length > 0) {
+      await prisma.interview.create({
+        data: {
+          processId: submittedProcesses[0].id,
+          scheduledAt: threeDays,
+          durationMinutes: 30,
+          type: "phone",
+          notes: "Telefon ile ön değerlendirme",
+          createdById: consultant.id,
+        },
+      });
+    }
+
+    if (submittedProcesses.length > 1) {
+      await prisma.interview.create({
+        data: {
+          processId: submittedProcesses[1].id,
+          scheduledAt: fiveDays,
+          durationMinutes: 60,
+          type: "online",
+          meetingLink: "https://zoom.us/j/12345678",
+          clientParticipants: "Hastane Genel Müdürü",
+          notes: "Yönetim pozisyonu mülakatı",
+          createdById: admin.id,
+        },
+      });
+    }
+
+    if (processes.length > 0) {
+      await prisma.interview.create({
+        data: {
+          processId: processes[0].id,
+          scheduledAt: nextWeek,
+          durationMinutes: 90,
+          type: "face_to_face",
+          location: "TechVista Ofis, Maslak",
+          clientParticipants: "CTO, VP Engineering, Team Lead",
+          notes: "Final mülakat - Takım ile tanışma",
+          createdById: admin.id,
+        },
+      });
+    }
+
     console.log("Interviews created.");
   }
 

@@ -8,6 +8,7 @@ import {
   PIPELINE_STAGE_LABELS,
   STAGE_COLORS,
   INTERVIEW_TYPE_LABELS,
+  EMAIL_TEMPLATE_CATEGORY_LABELS,
 } from "@/lib/constants";
 
 type StageHistoryItem = {
@@ -39,6 +40,26 @@ type InterviewItem = {
   isCompleted: boolean;
   createdAt: string;
   createdBy: { firstName: string; lastName: string };
+};
+
+type EmailTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  category: string | null;
+};
+
+type EmailLogItem = {
+  id: string;
+  toEmail: string;
+  subject: string;
+  body: string;
+  status: string;
+  errorMessage: string | null;
+  sentAt: string;
+  template: { id: string; name: string } | null;
+  sentBy: { firstName: string; lastName: string };
 };
 
 type ProcessDetail = {
@@ -96,6 +117,21 @@ export default function ProcessDetailPage() {
     notes: "",
   });
   const [savingInterview, setSavingInterview] = useState(false);
+
+  // Email
+  const [showEmailPanel, setShowEmailPanel] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailTo, setEmailTo] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSentMsg, setEmailSentMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Email history
+  const [emailLogs, setEmailLogs] = useState<EmailLogItem[]>([]);
+  const [emailLogsLoading, setEmailLogsLoading] = useState(false);
+  const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
 
   const fetchProcess = useCallback(async () => {
     const res = await fetch(`/api/processes/${id}`);
@@ -176,6 +212,82 @@ export default function ProcessDetailPage() {
     setSavingInterview(false);
   }
 
+  async function openEmailPanel() {
+    setShowEmailPanel(true);
+    setEmailSentMsg(null);
+    setEmailTo(process?.candidate?.email || "");
+    setEmailSubject("");
+    setEmailBody("");
+    setSelectedTemplateId("");
+    // Fetch active templates
+    const res = await fetch("/api/email-templates?limit=100&isActive=true");
+    const json = await res.json();
+    if (json.success) setEmailTemplates(json.data);
+  }
+
+  function handleTemplateSelect(templateId: string) {
+    setSelectedTemplateId(templateId);
+    if (!templateId) return;
+    const tpl = emailTemplates.find((t) => t.id === templateId);
+    if (!tpl || !process) return;
+
+    // Replace dynamic fields
+    let subject = tpl.subject;
+    let body = tpl.body;
+    const replacements: Record<string, string> = {
+      "{candidateName}": `${process.candidate.firstName} ${process.candidate.lastName}`,
+      "{firmName}": process.firm.name,
+      "{position}": process.position.title,
+    };
+    for (const [key, value] of Object.entries(replacements)) {
+      subject = subject.replaceAll(key, value);
+      body = body.replaceAll(key, value);
+    }
+    setEmailSubject(subject);
+    setEmailBody(body);
+  }
+
+  async function handleSendEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!process) return;
+    setSendingEmail(true);
+    setEmailSentMsg(null);
+    const res = await fetch("/api/emails/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        candidateId: process.candidate.id,
+        processId: process.id,
+        templateId: selectedTemplateId || undefined,
+        toEmail: emailTo,
+        subject: emailSubject,
+        body: emailBody,
+      }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setEmailSentMsg({ ok: true, text: "E-posta başarıyla gönderildi" });
+      setShowEmailPanel(false);
+      if (activeTab === "emails") fetchEmailLogs();
+    } else {
+      setEmailSentMsg({ ok: false, text: json.error?.message || "E-posta gönderilemedi" });
+    }
+    setSendingEmail(false);
+  }
+
+  const fetchEmailLogs = useCallback(async () => {
+    if (!id) return;
+    setEmailLogsLoading(true);
+    const res = await fetch(`/api/emails?processId=${id}&limit=50`);
+    const json = await res.json();
+    if (json.success) setEmailLogs(json.data);
+    setEmailLogsLoading(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (activeTab === "emails") fetchEmailLogs();
+  }, [activeTab, fetchEmailLogs]);
+
   function renderStars(score: number | null) {
     if (!score) return <span className="text-slate-300">—</span>;
     return (
@@ -205,6 +317,7 @@ export default function ProcessDetailPage() {
     { key: "timeline", label: "Zaman Çizelgesi" },
     { key: "interviews", label: `Mülakatlar (${process.interviews.length})` },
     { key: "notes", label: `Notlar (${process.notes.length})` },
+    { key: "emails", label: "E-postalar" },
   ];
 
   const inputClass =
@@ -249,6 +362,15 @@ export default function ProcessDetailPage() {
                 Kapatıldı
               </span>
             )}
+            <button
+              onClick={openEmailPanel}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-700"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+              E-posta Gönder
+            </button>
           </div>
         </div>
 
@@ -303,6 +425,100 @@ export default function ProcessDetailPage() {
                 İptal
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Email Sent Message */}
+        {emailSentMsg && (
+          <div className={`mt-4 rounded-lg border p-3 text-sm font-medium ${
+            emailSentMsg.ok
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-rose-200 bg-rose-50 text-rose-700"
+          }`}>
+            {emailSentMsg.text}
+          </div>
+        )}
+
+        {/* Email Send Panel */}
+        {showEmailPanel && (
+          <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/30 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">E-posta Gönder</h3>
+              <button
+                onClick={() => setShowEmailPanel(false)}
+                className="text-slate-400 transition-colors hover:text-slate-600"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleSendEmail} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Şablon Seç</label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => handleTemplateSelect(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">— Şablon seçin (isteğe bağlı) —</option>
+                  {emailTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} {t.category ? `(${EMAIL_TEMPLATE_CATEGORY_LABELS[t.category] || t.category})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Alıcı</label>
+                <input
+                  type="email"
+                  value={emailTo}
+                  onChange={(e) => setEmailTo(e.target.value)}
+                  required
+                  placeholder="ornek@email.com"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Konu</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  required
+                  placeholder="E-posta konusu..."
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">İçerik</label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  required
+                  rows={6}
+                  placeholder="E-posta içeriği..."
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={sendingEmail}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {sendingEmail ? "Gönderiliyor..." : "Gönder"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmailPanel(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                >
+                  İptal
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>
@@ -719,6 +935,74 @@ export default function ProcessDetailPage() {
                         minute: "2-digit",
                       })}
                     </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Emails Tab */}
+        {activeTab === "emails" && (
+          <div>
+            {emailLogsLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
+                ))}
+              </div>
+            ) : emailLogs.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm">
+                <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                </svg>
+                <p className="mt-3 text-sm text-slate-500">Bu süreç için henüz e-posta gönderilmemiş</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {emailLogs.map((email) => (
+                  <div key={email.id} className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <button
+                      onClick={() => setExpandedEmailId(expandedEmailId === email.id ? null : email.id)}
+                      className="flex w-full items-center justify-between p-4 text-left"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            email.status === "sent"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-rose-50 text-rose-700"
+                          }`}>
+                            {email.status === "sent" ? "Gönderildi" : "Başarısız"}
+                          </span>
+                          <span className="text-sm font-medium text-slate-900">{email.subject}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {email.toEmail} · {email.sentBy.firstName} {email.sentBy.lastName} ·{" "}
+                          {new Date(email.sentAt).toLocaleDateString("tr-TR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          {email.template && (
+                            <span className="ml-1 text-indigo-500">· {email.template.name}</span>
+                          )}
+                        </p>
+                      </div>
+                      <svg className={`h-4 w-4 text-slate-400 transition-transform ${expandedEmailId === email.id ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </button>
+                    {expandedEmailId === email.id && (
+                      <div className="border-t border-slate-100 p-4">
+                        <div className="whitespace-pre-wrap text-sm text-slate-700">{email.body}</div>
+                        {email.errorMessage && (
+                          <p className="mt-3 text-xs text-rose-600">Hata: {email.errorMessage}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
