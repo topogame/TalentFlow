@@ -62,17 +62,15 @@ async function main() {
     },
   ];
 
-  for (const template of templates) {
-    await prisma.emailTemplate.upsert({
-      where: { id: template.category },
-      update: {},
-      create: {
-        ...template,
-        createdById: admin.id,
-      },
+  const existingTemplates = await prisma.emailTemplate.count();
+  if (existingTemplates === 0) {
+    await prisma.emailTemplate.createMany({
+      data: templates.map((t) => ({ ...t, createdById: admin.id })),
     });
+    console.log(`${templates.length} email templates created.`);
+  } else {
+    console.log(`Email templates already exist, skipping.`);
   }
-  console.log(`${templates.length} email templates created.`);
 
   // Create default settings
   const settings = [
