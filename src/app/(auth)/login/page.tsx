@@ -34,17 +34,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="rounded-lg bg-white p-8 shadow-md">
+    <div className="animate-fade-in rounded-2xl bg-white/95 p-10 shadow-2xl backdrop-blur-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-900">TalentFlow</h1>
-        <p className="mt-2 text-sm text-gray-600">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600">
+          <span className="text-lg font-bold text-white">T</span>
+        </div>
+        <h1 className="text-2xl font-bold text-slate-900">
+          Talent<span className="text-indigo-600">Flow</span>
+        </h1>
+        <p className="mt-2 text-sm text-slate-500">
           Aday Veri Tabanı ve Süreç Yönetim Sistemi
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
+          <div className="rounded-lg bg-rose-50 p-3.5 text-sm text-rose-600">
             {error}
           </div>
         )}
@@ -52,7 +57,7 @@ export default function LoginPage() {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-slate-700"
           >
             E-posta
           </label>
@@ -62,7 +67,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1.5 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             placeholder="email@firma.com"
           />
         </div>
@@ -70,7 +75,7 @@ export default function LoginPage() {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-slate-700"
           >
             Şifre
           </label>
@@ -80,7 +85,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="mt-1.5 block w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             placeholder="********"
           />
         </div>
@@ -88,7 +93,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
         >
           {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
         </button>
@@ -96,7 +101,7 @@ export default function LoginPage() {
         <div className="text-center">
           <a
             href="/reset-password"
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-indigo-600 transition-colors hover:text-indigo-700"
           >
             Şifremi Unuttum
           </a>

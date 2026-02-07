@@ -9,7 +9,7 @@ export default function NewFirmPage() {
   const [error, setError] = useState("");
 
   const inputClass =
-    "mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+    "mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,26 +46,36 @@ export default function NewFirmPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Yeni Firma</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Yeni Firma</h1>
+        <p className="mt-1 text-sm text-slate-500">Müşteri portföyüne yeni firma ekleyin</p>
+      </div>
 
       {error && (
-        <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
+        <div className="mb-6 rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">Firma Bilgileri</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50">
+              <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-slate-900">Firma Bilgileri</h2>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Firma Adı *</label>
+              <label className="block text-sm font-medium text-slate-700">Firma Adı *</label>
               <input name="name" type="text" required className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Sektör</label>
+              <label className="block text-sm font-medium text-slate-700">Sektör</label>
               <input name="sector" type="text" className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Firma Büyüklüğü</label>
+              <label className="block text-sm font-medium text-slate-700">Firma Büyüklüğü</label>
               <select name="companySize" className={inputClass}>
                 <option value="">Seçiniz</option>
                 <option value="1-10">1-10</option>
@@ -77,36 +87,36 @@ export default function NewFirmPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Şehir</label>
+              <label className="block text-sm font-medium text-slate-700">Şehir</label>
               <input name="city" type="text" className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Ülke</label>
+              <label className="block text-sm font-medium text-slate-700">Ülke</label>
               <input name="country" type="text" defaultValue="Türkiye" className={inputClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Website</label>
+              <label className="block text-sm font-medium text-slate-700">Website</label>
               <input name="website" type="url" className={inputClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Notlar</label>
+              <label className="block text-sm font-medium text-slate-700">Notlar</label>
               <textarea name="notes" rows={3} className={inputClass} />
             </div>
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             type="submit"
             disabled={saving}
-            className="rounded-md bg-blue-600 px-6 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50"
           >
             {saving ? "Kaydediliyor..." : "Kaydet"}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
             İptal
           </button>
