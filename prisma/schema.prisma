@@ -1,0 +1,466 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  admin
+  consultant
+}
+
+enum CandidateStatus {
+  active
+  passive
+}
+
+enum LanguageLevel {
+  beginner
+  intermediate
+  advanced
+  native
+}
+
+enum SalaryType {
+  net
+  gross
+}
+
+enum FirmStatus {
+  active
+  passive
+}
+
+enum PositionStatus {
+  open
+  on_hold
+  closed
+}
+
+enum PositionPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum WorkModel {
+  office
+  remote
+  hybrid
+}
+
+enum ProcessStage {
+  pool
+  initial_interview
+  submitted
+  interview
+  positive
+  negative
+  on_hold
+}
+
+enum InterviewType {
+  face_to_face
+  online
+  phone
+}
+
+enum EmailStatus {
+  sent
+  failed
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id                   String    @id @default(uuid()) @db.Uuid
+  email                String    @unique @db.VarChar(255)
+  passwordHash         String    @map("password_hash") @db.VarChar(255)
+  firstName            String    @map("first_name") @db.VarChar(100)
+  lastName             String    @map("last_name") @db.VarChar(100)
+  role                 UserRole  @default(consultant)
+  isActive             Boolean   @default(true) @map("is_active")
+  lastLoginAt          DateTime? @map("last_login_at")
+  passwordResetToken   String?   @map("password_reset_token") @db.VarChar(255)
+  passwordResetExpires DateTime? @map("password_reset_expires")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  createdCandidates    Candidate[]          @relation("CandidateCreatedBy")
+  candidateNotes       CandidateNote[]
+  candidateDocuments   CandidateDocument[]
+  createdFirms         Firm[]               @relation("FirmCreatedBy")
+  firmNotes            FirmNote[]
+  createdPositions     Position[]           @relation("PositionCreatedBy")
+  assignedProcesses    Process[]            @relation("ProcessAssignedTo")
+  createdProcesses     Process[]            @relation("ProcessCreatedBy")
+  processNotes         ProcessNote[]
+  stageChanges         ProcessStageHistory[]
+  createdInterviews    Interview[]
+  createdTemplates     EmailTemplate[]
+  sentEmails           EmailLog[]
+  auditLogs            AuditLog[]
+  updatedSettings      Setting[]
+
+  @@map("users")
+}
+
+model Candidate {
+  id                   String          @id @default(uuid()) @db.Uuid
+  firstName            String          @map("first_name") @db.VarChar(100)
+  lastName             String          @map("last_name") @db.VarChar(100)
+  email                String?         @db.VarChar(255)
+  phone                String?         @db.VarChar(30)
+  linkedinUrl          String?         @map("linkedin_url") @db.VarChar(500)
+  educationLevel       String?         @map("education_level") @db.VarChar(100)
+  totalExperienceYears Int?            @map("total_experience_years")
+  currentSector        String?         @map("current_sector") @db.VarChar(200)
+  currentTitle         String?         @map("current_title") @db.VarChar(200)
+  salaryExpectation    Decimal?        @map("salary_expectation") @db.Decimal(12, 2)
+  salaryCurrency       String?         @default("TRY") @map("salary_currency") @db.VarChar(3)
+  salaryType           SalaryType?     @map("salary_type")
+  country              String?         @db.VarChar(100)
+  city                 String?         @db.VarChar(100)
+  isRemoteEligible     Boolean         @default(false) @map("is_remote_eligible")
+  isHybridEligible     Boolean         @default(false) @map("is_hybrid_eligible")
+  status               CandidateStatus @default(active)
+  createdById          String          @map("created_by_id") @db.Uuid
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy  User                @relation("CandidateCreatedBy", fields: [createdById], references: [id])
+  languages  CandidateLanguage[]
+  documents  CandidateDocument[]
+  notes      CandidateNote[]
+  processes  Process[]
+  emailLogs  EmailLog[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([linkedinUrl])
+  @@index([firstName, lastName])
+  @@index([currentSector])
+  @@index([city])
+  @@index([status])
+  @@index([createdById])
+  @@map("candidates")
+}
+
+model CandidateLanguage {
+  id          String        @id @default(uuid()) @db.Uuid
+  candidateId String        @map("candidate_id") @db.Uuid
+  language    String        @db.VarChar(50)
+  level       LanguageLevel
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_languages")
+}
+
+model CandidateDocument {
+  id           String   @id @default(uuid()) @db.Uuid
+  candidateId  String   @map("candidate_id") @db.Uuid
+  fileName     String   @map("file_name") @db.VarChar(255)
+  fileUrl      String   @map("file_url") @db.VarChar(1000)
+  fileType     String   @map("file_type") @db.VarChar(50)
+  fileSize     Int      @map("file_size")
+  uploadedById String   @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  candidate  Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  uploadedBy User      @relation(fields: [uploadedById], references: [id])
+
+  @@map("candidate_documents")
+}
+
+model CandidateNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  candidateId String   @map("candidate_id") @db.Uuid
+  content     String   @db.Text
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@map("candidate_notes")
+}
+
+model Firm {
+  id          String     @id @default(uuid()) @db.Uuid
+  name        String     @db.VarChar(255)
+  sector      String?    @db.VarChar(200)
+  companySize String?    @map("company_size") @db.VarChar(50)
+  city        String?    @db.VarChar(100)
+  country     String?    @db.VarChar(100)
+  website     String?    @db.VarChar(500)
+  notes       String?    @db.Text
+  status      FirmStatus @default(active)
+  createdById String     @map("created_by_id") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy User          @relation("FirmCreatedBy", fields: [createdById], references: [id])
+  contacts  FirmContact[]
+  firmNotes FirmNote[]
+  positions Position[]
+  processes Process[]
+
+  @@index([name])
+  @@index([sector])
+  @@index([status])
+  @@map("firms")
+}
+
+model FirmContact {
+  id        String   @id @default(uuid()) @db.Uuid
+  firmId    String   @map("firm_id") @db.Uuid
+  name      String   @db.VarChar(200)
+  title     String?  @db.VarChar(200)
+  phone     String?  @db.VarChar(30)
+  email     String?  @db.VarChar(255)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  firm Firm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+
+  @@map("firm_contacts")
+}
+
+model FirmNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  firmId      String   @map("firm_id") @db.Uuid
+  content     String   @db.Text
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  firm      Firm @relation(fields: [firmId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@map("firm_notes")
+}
+
+model Position {
+  id                   String           @id @default(uuid()) @db.Uuid
+  firmId               String           @map("firm_id") @db.Uuid
+  title                String           @db.VarChar(255)
+  department           String?          @db.VarChar(200)
+  reportingTo          String?          @map("reporting_to") @db.VarChar(200)
+  minExperienceYears   Int?             @map("min_experience_years")
+  educationRequirement String?          @map("education_requirement") @db.VarChar(200)
+  requiredSkills       String?          @map("required_skills") @db.Text
+  languageRequirement  String?          @map("language_requirement") @db.VarChar(500)
+  sectorPreference     String?          @map("sector_preference") @db.VarChar(200)
+  city                 String?          @db.VarChar(100)
+  country              String?          @db.VarChar(100)
+  workModel            WorkModel?       @map("work_model")
+  travelRequirement    String?          @map("travel_requirement") @db.VarChar(200)
+  salaryMin            Decimal?         @map("salary_min") @db.Decimal(12, 2)
+  salaryMax            Decimal?         @map("salary_max") @db.Decimal(12, 2)
+  salaryCurrency       String?          @default("TRY") @map("salary_currency") @db.VarChar(3)
+  salaryType           SalaryType?      @map("salary_type")
+  benefits             String?          @db.Text
+  status               PositionStatus   @default(open)
+  priority             PositionPriority @default(normal)
+  openedAt             DateTime?        @map("opened_at") @db.Date
+  targetCloseDate      DateTime?        @map("target_close_date") @db.Date
+  createdById          String           @map("created_by_id") @db.Uuid
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy User      @relation("PositionCreatedBy", fields: [createdById], references: [id])
+  firm      Firm      @relation(fields: [firmId], references: [id])
+  processes Process[]
+
+  @@index([firmId])
+  @@index([status])
+  @@index([title])
+  @@map("positions")
+}
+
+model Process {
+  id             String       @id @default(uuid()) @db.Uuid
+  candidateId    String       @map("candidate_id") @db.Uuid
+  firmId         String       @map("firm_id") @db.Uuid
+  positionId     String       @map("position_id") @db.Uuid
+  assignedToId   String       @map("assigned_to_id") @db.Uuid
+  stage          ProcessStage @default(pool)
+  fitnessScore   Int?         @map("fitness_score")
+  stageChangedAt DateTime     @default(now()) @map("stage_changed_at")
+  closedAt       DateTime?    @map("closed_at")
+  createdById    String       @map("created_by_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  candidate    Candidate             @relation(fields: [candidateId], references: [id])
+  firm         Firm                  @relation(fields: [firmId], references: [id])
+  position     Position              @relation(fields: [positionId], references: [id])
+  assignedTo   User                  @relation("ProcessAssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User                  @relation("ProcessCreatedBy", fields: [createdById], references: [id])
+  notes        ProcessNote[]
+  stageHistory ProcessStageHistory[]
+  interviews   Interview[]
+  emailLogs    EmailLog[]
+
+  @@unique([candidateId, firmId, positionId, closedAt], name: "unique_active_process")
+  @@index([candidateId])
+  @@index([firmId])
+  @@index([positionId])
+  @@index([assignedToId])
+  @@index([stage])
+  @@map("processes")
+}
+
+model ProcessNote {
+  id          String   @id @default(uuid()) @db.Uuid
+  processId   String   @map("process_id") @db.Uuid
+  content     String   @db.Text
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@map("process_notes")
+}
+
+model ProcessStageHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  processId   String   @map("process_id") @db.Uuid
+  fromStage   String?  @map("from_stage") @db.VarChar(50)
+  toStage     String   @map("to_stage") @db.VarChar(50)
+  note        String?  @db.Text
+  changedById String   @map("changed_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  process   Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  changedBy User    @relation(fields: [changedById], references: [id])
+
+  @@index([processId])
+  @@map("process_stage_history")
+}
+
+model Interview {
+  id                String        @id @default(uuid()) @db.Uuid
+  processId         String        @map("process_id") @db.Uuid
+  scheduledAt       DateTime      @map("scheduled_at")
+  durationMinutes   Int           @default(60) @map("duration_minutes")
+  type              InterviewType
+  meetingLink       String?       @map("meeting_link") @db.VarChar(500)
+  location          String?       @db.VarChar(500)
+  clientParticipants String?      @map("client_participants") @db.Text
+  notes             String?       @db.Text
+  resultNotes       String?       @map("result_notes") @db.Text
+  isCompleted       Boolean       @default(false) @map("is_completed")
+  reminder24hSent   Boolean       @default(false) @map("reminder_24h_sent")
+  reminder1hSent    Boolean       @default(false) @map("reminder_1h_sent")
+  createdById       String        @map("created_by_id") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  process   Process @relation(fields: [processId], references: [id])
+  createdBy User    @relation(fields: [createdById], references: [id])
+
+  @@index([processId])
+  @@index([scheduledAt])
+  @@map("interviews")
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(255)
+  subject     String   @db.VarChar(500)
+  body        String   @db.Text
+  category    String?  @db.VarChar(100)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  createdBy User       @relation(fields: [createdById], references: [id])
+  emailLogs EmailLog[]
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id           String      @id @default(uuid()) @db.Uuid
+  candidateId  String      @map("candidate_id") @db.Uuid
+  processId    String?     @map("process_id") @db.Uuid
+  templateId   String?     @map("template_id") @db.Uuid
+  toEmail      String      @map("to_email") @db.VarChar(255)
+  subject      String      @db.VarChar(500)
+  body         String      @db.Text
+  sentById     String      @map("sent_by_id") @db.Uuid
+  sentAt       DateTime    @default(now()) @map("sent_at")
+  status       EmailStatus @default(sent)
+  errorMessage String?     @map("error_message") @db.Text
+
+  // Relations
+  candidate Candidate      @relation(fields: [candidateId], references: [id])
+  process   Process?        @relation(fields: [processId], references: [id])
+  template  EmailTemplate?  @relation(fields: [templateId], references: [id])
+  sentBy    User            @relation(fields: [sentById], references: [id])
+
+  @@index([candidateId])
+  @@index([processId])
+  @@map("email_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  action     String   @db.VarChar(50)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String   @map("entity_id") @db.Uuid
+  changes    Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Setting {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique @db.VarChar(100)
+  value       String   @db.Text
+  updatedById String?  @map("updated_by_id") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+
+  @@map("settings")
+}
