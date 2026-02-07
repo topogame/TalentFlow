@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [], // Configured in auth.ts with Prisma
   session: {
     strategy: "jwt",
