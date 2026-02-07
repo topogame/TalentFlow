@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -34,6 +33,8 @@ describe("Database Integration", () => {
   afterAll(async () => {
     // Clean up test data in correct order (respecting foreign keys)
     await prisma.interview.deleteMany({ where: { process: { createdById: testUserId } } });
+    await prisma.processNote.deleteMany({ where: { process: { createdById: testUserId } } });
+    await prisma.processStageHistory.deleteMany({ where: { process: { createdById: testUserId } } });
     await prisma.process.deleteMany({ where: { createdById: testUserId } });
     await prisma.candidateNote.deleteMany({ where: { createdById: testUserId } });
     await prisma.candidateLanguage.deleteMany({ where: { candidate: { createdById: testUserId } } });
@@ -311,6 +312,173 @@ describe("Database Integration", () => {
       });
       expect(updated.closedAt).not.toBeNull();
       expect(updated.stage).toBe("positive");
+    });
+  });
+
+  // ─── Process Stage History & Notes ───
+  describe("Process Stage History & Notes", () => {
+    let processId: string;
+
+    beforeAll(async () => {
+      const process = await prisma.process.create({
+        data: {
+          candidateId: testCandidateId,
+          firmId: testFirmId,
+          positionId: testPositionId,
+          stage: "pool",
+          createdById: testUserId,
+          assignedToId: testUserId,
+        },
+      });
+      processId = process.id;
+    });
+
+    it("creates stage history record", async () => {
+      const history = await prisma.processStageHistory.create({
+        data: {
+          processId,
+          fromStage: null,
+          toStage: "pool",
+          changedById: testUserId,
+          note: "Süreç başlatıldı",
+        },
+      });
+      expect(history.id).toBeDefined();
+      expect(history.toStage).toBe("pool");
+      expect(history.note).toBe("Süreç başlatıldı");
+    });
+
+    it("tracks stage transition with from/to", async () => {
+      await prisma.process.update({
+        where: { id: processId },
+        data: { stage: "initial_interview" },
+      });
+
+      const history = await prisma.processStageHistory.create({
+        data: {
+          processId,
+          fromStage: "pool",
+          toStage: "initial_interview",
+          changedById: testUserId,
+        },
+      });
+      expect(history.fromStage).toBe("pool");
+      expect(history.toStage).toBe("initial_interview");
+    });
+
+    it("lists stage history in order", async () => {
+      const histories = await prisma.processStageHistory.findMany({
+        where: { processId },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(histories.length).toBeGreaterThanOrEqual(2);
+      expect(histories[0].toStage).toBe("pool");
+      expect(histories[1].toStage).toBe("initial_interview");
+    });
+
+    it("creates a process note", async () => {
+      const note = await prisma.processNote.create({
+        data: {
+          processId,
+          content: "Aday ile ilk görüşme yapıldı.",
+          createdById: testUserId,
+        },
+      });
+      expect(note.id).toBeDefined();
+      expect(note.content).toBe("Aday ile ilk görüşme yapıldı.");
+    });
+
+    it("lists process notes with author", async () => {
+      const notes = await prisma.processNote.findMany({
+        where: { processId },
+        include: { createdBy: { select: { firstName: true, lastName: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+      expect(notes.length).toBeGreaterThanOrEqual(1);
+      expect(notes[0].createdBy.firstName).toBe("Test");
+    });
+
+    it("closes process and prevents further stage changes conceptually", async () => {
+      const closed = await prisma.process.update({
+        where: { id: processId },
+        data: { stage: "negative", closedAt: new Date() },
+      });
+      expect(closed.closedAt).not.toBeNull();
+      expect(closed.stage).toBe("negative");
+    });
+  });
+
+  // ─── Interview Scheduling ───
+  describe("Interview Scheduling", () => {
+    let processId: string;
+    let interviewId: string;
+
+    beforeAll(async () => {
+      const process = await prisma.process.create({
+        data: {
+          candidateId: testCandidateId,
+          firmId: testFirmId,
+          positionId: testPositionId,
+          stage: "interview",
+          createdById: testUserId,
+          assignedToId: testUserId,
+        },
+      });
+      processId = process.id;
+    });
+
+    it("schedules an interview", async () => {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 7);
+
+      const interview = await prisma.interview.create({
+        data: {
+          processId,
+          scheduledAt: nextWeek,
+          type: "face_to_face",
+          durationMinutes: 45,
+          location: "Levent Ofis, İstanbul",
+          clientParticipants: "Ahmet Bey (CTO)",
+          notes: "Teknik mülakat",
+          createdById: testUserId,
+        },
+      });
+
+      expect(interview.id).toBeDefined();
+      expect(interview.type).toBe("face_to_face");
+      expect(interview.durationMinutes).toBe(45);
+      interviewId = interview.id;
+    });
+
+    it("updates interview with reschedule", async () => {
+      const newDate = new Date();
+      newDate.setDate(newDate.getDate() + 10);
+
+      const updated = await prisma.interview.update({
+        where: { id: interviewId },
+        data: { scheduledAt: newDate, durationMinutes: 60 },
+      });
+      expect(updated.durationMinutes).toBe(60);
+    });
+
+    it("marks interview as completed with notes", async () => {
+      const completed = await prisma.interview.update({
+        where: { id: interviewId },
+        data: {
+          isCompleted: true,
+          resultNotes: "Aday teknik olarak güçlü, iletişimi iyi.",
+        },
+      });
+      expect(completed.isCompleted).toBe(true);
+      expect(completed.resultNotes).toContain("teknik olarak güçlü");
+    });
+
+    it("lists interviews for process ordered by date", async () => {
+      const interviews = await prisma.interview.findMany({
+        where: { processId },
+        orderBy: { scheduledAt: "asc" },
+      });
+      expect(interviews.length).toBeGreaterThanOrEqual(1);
     });
   });
 

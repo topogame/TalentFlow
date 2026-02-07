@@ -49,3 +49,29 @@ export const PAGINATION_DEFAULTS = {
 export const SESSION_TIMEOUT_HOURS = 8;
 
 export const STALE_PROCESS_DAYS = 7;
+
+export const STAGE_COLORS: Record<string, string> = {
+  pool: "bg-slate-100 text-slate-700",
+  initial_interview: "bg-blue-100 text-blue-700",
+  submitted: "bg-indigo-100 text-indigo-700",
+  interview: "bg-purple-100 text-purple-700",
+  positive: "bg-emerald-100 text-emerald-700",
+  negative: "bg-rose-100 text-rose-700",
+  on_hold: "bg-amber-100 text-amber-700",
+};
+
+export const STAGE_BG_COLORS: Record<string, string> = {
+  pool: "bg-slate-50",
+  initial_interview: "bg-blue-50/50",
+  submitted: "bg-indigo-50/50",
+  interview: "bg-purple-50/50",
+  positive: "bg-emerald-50/50",
+  negative: "bg-rose-50/50",
+  on_hold: "bg-amber-50/50",
+};
+
+export const INTERVIEW_TYPE_LABELS: Record<string, string> = {
+  face_to_face: "Yüz Yüze",
+  online: "Online",
+  phone: "Telefon",
+};

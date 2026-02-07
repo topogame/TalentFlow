@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import {
   loginSchema,
   createUserSchema,
@@ -13,6 +12,12 @@ import {
   createPositionSchema,
   updatePositionSchema,
   paginationSchema,
+  processListSchema,
+  createProcessSchema,
+  updateProcessSchema,
+  stageChangeSchema,
+  createInterviewSchema,
+  updateInterviewSchema,
 } from "./validations";
 
 // ─── Login Schema ───
@@ -398,6 +403,243 @@ describe("paginationSchema", () => {
 
   it("rejects limit over 100", () => {
     const result = paginationSchema.safeParse({ limit: 200 });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Process List Schema ───
+describe("processListSchema", () => {
+  it("provides defaults for empty query", () => {
+    const result = processListSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.page).toBe(1);
+      expect(result.data.limit).toBe(20);
+      expect(result.data.view).toBe("list");
+    }
+  });
+
+  it("accepts valid filters", () => {
+    const result = processListSchema.safeParse({
+      candidateId: "550e8400-e29b-41d4-a716-446655440000",
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      stage: "pool",
+      view: "kanban",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid UUID for candidateId", () => {
+    const result = processListSchema.safeParse({ candidateId: "not-uuid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid UUID for firmId", () => {
+    const result = processListSchema.safeParse({ firmId: "not-uuid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid UUID for positionId", () => {
+    const result = processListSchema.safeParse({ positionId: "not-uuid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid stage", () => {
+    const result = processListSchema.safeParse({ stage: "hired" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts kanban view", () => {
+    const result = processListSchema.safeParse({ view: "kanban" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.view).toBe("kanban");
+  });
+
+  it("rejects invalid view", () => {
+    const result = processListSchema.safeParse({ view: "grid" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Create Process Schema ───
+describe("createProcessSchema", () => {
+  const validProcess = {
+    candidateId: "550e8400-e29b-41d4-a716-446655440000",
+    firmId: "550e8400-e29b-41d4-a716-446655440001",
+    positionId: "550e8400-e29b-41d4-a716-446655440002",
+  };
+
+  it("accepts minimal valid data", () => {
+    const result = createProcessSchema.safeParse(validProcess);
+    expect(result.success).toBe(true);
+  });
+
+  it("defaults stage to pool", () => {
+    const result = createProcessSchema.safeParse(validProcess);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.stage).toBe("pool");
+  });
+
+  it("accepts fitnessScore 1-5", () => {
+    const result = createProcessSchema.safeParse({ ...validProcess, fitnessScore: 3 });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects fitnessScore 0", () => {
+    const result = createProcessSchema.safeParse({ ...validProcess, fitnessScore: 0 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects fitnessScore 6", () => {
+    const result = createProcessSchema.safeParse({ ...validProcess, fitnessScore: 6 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid candidateId", () => {
+    const result = createProcessSchema.safeParse({ ...validProcess, candidateId: "bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid stage", () => {
+    const result = createProcessSchema.safeParse({ ...validProcess, stage: "placed" });
+    expect(result.success).toBe(false);
+  });
+
+  it("coerces fitnessScore string to number", () => {
+    const result = createProcessSchema.safeParse({ ...validProcess, fitnessScore: "4" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.fitnessScore).toBe(4);
+  });
+});
+
+// ─── Update Process Schema ───
+describe("updateProcessSchema", () => {
+  it("accepts partial update", () => {
+    const result = updateProcessSchema.safeParse({ fitnessScore: 5 });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty object", () => {
+    const result = updateProcessSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("validates assignedToId as UUID", () => {
+    const result = updateProcessSchema.safeParse({ assignedToId: "not-uuid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects fitnessScore out of range", () => {
+    const result = updateProcessSchema.safeParse({ fitnessScore: 10 });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Stage Change Schema ───
+describe("stageChangeSchema", () => {
+  it("accepts valid stage", () => {
+    const result = stageChangeSchema.safeParse({ stage: "submitted" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts stage with note", () => {
+    const result = stageChangeSchema.safeParse({ stage: "positive", note: "İyi bir aday" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid stage", () => {
+    const result = stageChangeSchema.safeParse({ stage: "hired" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing stage", () => {
+    const result = stageChangeSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects note over 5000 chars", () => {
+    const result = stageChangeSchema.safeParse({ stage: "pool", note: "a".repeat(5001) });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Create Interview Schema ───
+describe("createInterviewSchema", () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const validInterview = {
+    scheduledAt: tomorrow.toISOString(),
+    type: "face_to_face" as const,
+  };
+
+  it("accepts valid face-to-face interview", () => {
+    const result = createInterviewSchema.safeParse(validInterview);
+    expect(result.success).toBe(true);
+  });
+
+  it("defaults durationMinutes to 60", () => {
+    const result = createInterviewSchema.safeParse(validInterview);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.durationMinutes).toBe(60);
+  });
+
+  it("rejects past date", () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const result = createInterviewSchema.safeParse({ ...validInterview, scheduledAt: yesterday.toISOString() });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid type", () => {
+    const result = createInterviewSchema.safeParse({ ...validInterview, type: "client" });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires meetingLink for online type", () => {
+    const result = createInterviewSchema.safeParse({ ...validInterview, type: "online" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts online with meetingLink", () => {
+    const result = createInterviewSchema.safeParse({
+      ...validInterview,
+      type: "online",
+      meetingLink: "https://meet.google.com/abc",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects duration below 15", () => {
+    const result = createInterviewSchema.safeParse({ ...validInterview, durationMinutes: 10 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duration above 480", () => {
+    const result = createInterviewSchema.safeParse({ ...validInterview, durationMinutes: 500 });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Update Interview Schema ───
+describe("updateInterviewSchema", () => {
+  it("accepts partial update", () => {
+    const result = updateInterviewSchema.safeParse({ notes: "Updated notes" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty object", () => {
+    const result = updateInterviewSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts isCompleted boolean", () => {
+    const result = updateInterviewSchema.safeParse({ isCompleted: true, resultNotes: "Başarılı" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid meetingLink", () => {
+    const result = updateInterviewSchema.safeParse({ meetingLink: "not-a-url" });
     expect(result.success).toBe(false);
   });
 });

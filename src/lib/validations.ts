@@ -126,3 +126,109 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   search: z.string().optional(),
 });
+
+// Process
+export const processListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().optional(),
+  candidateId: z.string().uuid().optional(),
+  firmId: z.string().uuid().optional(),
+  positionId: z.string().uuid().optional(),
+  assignedToId: z.string().uuid().optional(),
+  stage: z
+    .enum([
+      "pool",
+      "initial_interview",
+      "submitted",
+      "interview",
+      "positive",
+      "negative",
+      "on_hold",
+    ])
+    .optional(),
+  view: z.enum(["list", "kanban"]).optional().default("list"),
+});
+
+export const createProcessSchema = z.object({
+  candidateId: z.string().uuid("Geçerli bir aday seçin"),
+  firmId: z.string().uuid("Geçerli bir firma seçin"),
+  positionId: z.string().uuid("Geçerli bir pozisyon seçin"),
+  stage: z
+    .enum([
+      "pool",
+      "initial_interview",
+      "submitted",
+      "interview",
+      "positive",
+      "negative",
+      "on_hold",
+    ])
+    .optional()
+    .default("pool"),
+  fitnessScore: z.coerce
+    .number()
+    .int()
+    .min(1, "Uyum puanı en az 1 olmalı")
+    .max(5, "Uyum puanı en fazla 5 olmalı")
+    .optional()
+    .nullable(),
+});
+
+export const updateProcessSchema = z.object({
+  fitnessScore: z.coerce.number().int().min(1).max(5).optional().nullable(),
+  assignedToId: z.string().uuid("Geçerli bir kullanıcı seçin").optional(),
+});
+
+export const stageChangeSchema = z.object({
+  stage: z.enum(
+    [
+      "pool",
+      "initial_interview",
+      "submitted",
+      "interview",
+      "positive",
+      "negative",
+      "on_hold",
+    ],
+    { message: "Geçerli bir aşama seçin" }
+  ),
+  note: z.string().max(5000).optional(),
+});
+
+// Interview
+export const createInterviewSchema = z
+  .object({
+    scheduledAt: z.coerce.date().refine((d) => d > new Date(), {
+      message: "Mülakat tarihi gelecekte olmalı",
+    }),
+    type: z.enum(["face_to_face", "online", "phone"], {
+      message: "Geçerli bir mülakat tipi seçin",
+    }),
+    durationMinutes: z.coerce.number().int().min(15).max(480).optional().default(60),
+    meetingLink: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")),
+    location: z.string().max(500).optional().or(z.literal("")),
+    clientParticipants: z.string().max(1000).optional().or(z.literal("")),
+    notes: z.string().max(5000).optional().or(z.literal("")),
+  })
+  .refine(
+    (data) => {
+      if (data.type === "online" && (!data.meetingLink || data.meetingLink === "")) {
+        return false;
+      }
+      return true;
+    },
+    { message: "Online mülakat için toplantı linki gerekli", path: ["meetingLink"] }
+  );
+
+export const updateInterviewSchema = z.object({
+  scheduledAt: z.coerce.date().optional(),
+  type: z.enum(["face_to_face", "online", "phone"]).optional(),
+  durationMinutes: z.coerce.number().int().min(15).max(480).optional(),
+  meetingLink: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")),
+  location: z.string().max(500).optional().or(z.literal("")),
+  clientParticipants: z.string().max(1000).optional().or(z.literal("")),
+  notes: z.string().max(5000).optional().or(z.literal("")),
+  resultNotes: z.string().max(5000).optional().or(z.literal("")),
+  isCompleted: z.boolean().optional(),
+});
