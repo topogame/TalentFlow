@@ -5,6 +5,7 @@ import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
 import { processListSchema, createProcessSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
 import { CLOSED_STAGES, PIPELINE_STAGES } from "@/lib/constants";
+import { createAuditLog } from "@/lib/audit";
 
 const processSelect = {
   id: true,
@@ -198,6 +199,14 @@ export async function POST(request: NextRequest) {
     });
 
     return created;
+  });
+
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "create",
+    entityType: "Process",
+    entityId: process.id,
+    changes: { created: { candidateId, firmId, positionId, stage, fitnessScore } },
   });
 
   return NextResponse.json(successResponse(process, { warnings: warnings.length > 0 ? warnings : undefined }), {

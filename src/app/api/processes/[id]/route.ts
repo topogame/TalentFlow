@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse } from "@/lib/utils";
 import { updateProcessSchema } from "@/lib/validations";
+import { createAuditLog, computeChanges } from "@/lib/audit";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -93,7 +94,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/processes/:id — Update process metadata
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const { error } = await requireAuth();
+  const { session, error } = await requireAuth();
   if (error) return error;
 
   const { id } = await params;
@@ -133,6 +134,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       position: { select: { id: true, title: true } },
       assignedTo: { select: { id: true, firstName: true, lastName: true } },
     },
+  });
+
+  const changes = computeChanges(
+    existing as unknown as Record<string, unknown>,
+    parsed.data as unknown as Record<string, unknown>
+  );
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "update",
+    entityType: "Process",
+    entityId: id,
+    changes,
   });
 
   return NextResponse.json(successResponse(process));

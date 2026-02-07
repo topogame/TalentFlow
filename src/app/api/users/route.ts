@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guard";
 import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
 import { createUserSchema, paginationSchema } from "@/lib/validations";
+import { createAuditLog } from "@/lib/audit";
 
 // GET /api/users — List users (admin only)
 export async function GET(request: NextRequest) {
@@ -102,15 +103,12 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // Audit log
-  await prisma.auditLog.create({
-    data: {
-      action: "user.create",
-      entityType: "User",
-      entityId: user.id,
-      userId: session!.user.id,
-      changes: { created: { email, firstName, lastName, role } },
-    },
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "create",
+    entityType: "User",
+    entityId: user.id,
+    changes: { created: { email, firstName, lastName, role } },
   });
 
   return NextResponse.json(successResponse(user), { status: 201 });

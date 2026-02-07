@@ -232,3 +232,73 @@ export const updateInterviewSchema = z.object({
   resultNotes: z.string().max(5000).optional().or(z.literal("")),
   isCompleted: z.boolean().optional(),
 });
+
+// Email Template
+export const createEmailTemplateSchema = z.object({
+  name: z.string().min(1, "Şablon adı gerekli").max(255),
+  subject: z.string().min(1, "Konu gerekli").max(500),
+  body: z.string().min(1, "İçerik gerekli"),
+  category: z.string().max(100).optional().or(z.literal("")),
+  isActive: z.boolean().optional().default(true),
+});
+
+export const updateEmailTemplateSchema = createEmailTemplateSchema.partial();
+
+export const emailTemplateListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().optional(),
+  category: z.string().optional(),
+  isActive: z.coerce.boolean().optional(),
+});
+
+// Email Sending
+export const sendEmailSchema = z.object({
+  candidateId: z.string().uuid("Geçerli bir aday seçin"),
+  processId: z.string().uuid("Geçerli bir süreç seçin").optional(),
+  templateId: z.string().uuid("Geçerli bir şablon seçin").optional(),
+  toEmail: z.string().email("Geçerli bir e-posta adresi girin"),
+  subject: z.string().min(1, "Konu gerekli").max(500),
+  body: z.string().min(1, "İçerik gerekli"),
+});
+
+// Email Log
+export const emailLogListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  candidateId: z.string().uuid().optional(),
+  processId: z.string().uuid().optional(),
+  status: z.enum(["sent", "failed"]).optional(),
+});
+
+// Calendar
+export const calendarQuerySchema = z.object({
+  start: z.coerce.date(),
+  end: z.coerce.date(),
+});
+
+// Audit Log
+export const auditLogListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  entityType: z.string().optional(),
+  entityId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  action: z.string().optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+});
+
+// Export
+export const exportQuerySchema = z.object({
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  format: z.enum(["xlsx"]).optional().default("xlsx"),
+});
+
+// Reports
+export const reportsQuerySchema = z.object({
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+  period: z.enum(["week", "month", "quarter", "year"]).optional().default("month"),
+});

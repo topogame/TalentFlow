@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/auth-guard";
 import { successResponse, errorResponse } from "@/lib/utils";
 import { updateUserSchema } from "@/lib/validations";
+import { createAuditLog } from "@/lib/audit";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -101,23 +102,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     },
   });
 
-  // Audit log
-  await prisma.auditLog.create({
-    data: {
-      action: "user.update",
-      entityType: "User",
-      entityId: user.id,
-      userId: session!.user.id,
-      changes: {
-        before: {
-          email: existing.email,
-          firstName: existing.firstName,
-          lastName: existing.lastName,
-          role: existing.role,
-          isActive: existing.isActive,
-        },
-        after: parsed.data,
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "update",
+    entityType: "User",
+    entityId: user.id,
+    changes: {
+      before: {
+        email: existing.email,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        role: existing.role,
+        isActive: existing.isActive,
       },
+      after: parsed.data,
     },
   });
 
@@ -152,15 +150,12 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     data: { isActive: false },
   });
 
-  // Audit log
-  await prisma.auditLog.create({
-    data: {
-      action: "user.deactivate",
-      entityType: "User",
-      entityId: id,
-      userId: session!.user.id,
-      changes: { before: { isActive: true }, after: { isActive: false } },
-    },
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "deactivate",
+    entityType: "User",
+    entityId: id,
+    changes: { before: { isActive: true }, after: { isActive: false } },
   });
 
   return NextResponse.json(successResponse({ message: "Kullanıcı devre dışı bırakıldı" }));

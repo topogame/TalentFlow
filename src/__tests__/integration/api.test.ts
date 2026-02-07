@@ -32,6 +32,9 @@ describe("Database Integration", () => {
 
   afterAll(async () => {
     // Clean up test data in correct order (respecting foreign keys)
+    await prisma.auditLog.deleteMany({ where: { userId: testUserId } });
+    await prisma.emailLog.deleteMany({ where: { sentById: testUserId } });
+    await prisma.emailTemplate.deleteMany({ where: { createdById: testUserId } });
     await prisma.interview.deleteMany({ where: { process: { createdById: testUserId } } });
     await prisma.processNote.deleteMany({ where: { process: { createdById: testUserId } } });
     await prisma.processStageHistory.deleteMany({ where: { process: { createdById: testUserId } } });
@@ -559,6 +562,433 @@ describe("Database Integration", () => {
         where: { closedAt: null },
       });
       expect(count).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  // ─── Email Template CRUD ───
+  describe("Email Template CRUD", () => {
+    let templateId: string;
+
+    it("creates an email template", async () => {
+      const template = await prisma.emailTemplate.create({
+        data: {
+          name: "Test Mülakat Daveti",
+          subject: "{candidateName} - Mülakat Daveti",
+          body: "Sayın {candidateName}, {firmName} firmasında {position} pozisyonu için mülakata davetlisiniz.",
+          category: "mulakat_daveti",
+          isActive: true,
+          createdById: testUserId,
+        },
+      });
+
+      expect(template.id).toBeDefined();
+      expect(template.name).toBe("Test Mülakat Daveti");
+      expect(template.isActive).toBe(true);
+      templateId = template.id;
+    });
+
+    it("lists templates with search", async () => {
+      const templates = await prisma.emailTemplate.findMany({
+        where: {
+          name: { contains: "Mülakat", mode: "insensitive" },
+          createdById: testUserId,
+        },
+      });
+      expect(templates.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("updates a template", async () => {
+      const updated = await prisma.emailTemplate.update({
+        where: { id: templateId },
+        data: { subject: "Güncellenmiş Konu" },
+      });
+      expect(updated.subject).toBe("Güncellenmiş Konu");
+    });
+
+    it("lists templates filtered by category", async () => {
+      const templates = await prisma.emailTemplate.findMany({
+        where: {
+          category: "mulakat_daveti",
+          createdById: testUserId,
+        },
+      });
+      expect(templates.length).toBeGreaterThanOrEqual(1);
+      expect(templates[0].category).toBe("mulakat_daveti");
+    });
+
+    it("deactivates a template", async () => {
+      const deactivated = await prisma.emailTemplate.update({
+        where: { id: templateId },
+        data: { isActive: false },
+      });
+      expect(deactivated.isActive).toBe(false);
+    });
+
+    it("includes usage count via _count", async () => {
+      const template = await prisma.emailTemplate.findUnique({
+        where: { id: templateId },
+        include: { _count: { select: { emailLogs: true } } },
+      });
+      expect(template).not.toBeNull();
+      expect(template!._count.emailLogs).toBe(0);
+    });
+  });
+
+  // ─── Email Log Operations ───
+  describe("Email Log Operations", () => {
+    it("creates an email log record", async () => {
+      const log = await prisma.emailLog.create({
+        data: {
+          candidateId: testCandidateId,
+          toEmail: "test@example.com",
+          subject: "Test E-posta",
+          body: "Bu bir test e-postasıdır.",
+          status: "sent",
+          sentById: testUserId,
+          sentAt: new Date(),
+        },
+      });
+
+      expect(log.id).toBeDefined();
+      expect(log.status).toBe("sent");
+      expect(log.toEmail).toBe("test@example.com");
+    });
+
+    it("creates a failed email log", async () => {
+      const log = await prisma.emailLog.create({
+        data: {
+          candidateId: testCandidateId,
+          toEmail: "fail@example.com",
+          subject: "Failed E-posta",
+          body: "Bu e-posta başarısız oldu.",
+          status: "failed",
+          errorMessage: "SMTP connection timeout",
+          sentById: testUserId,
+          sentAt: new Date(),
+        },
+      });
+
+      expect(log.status).toBe("failed");
+      expect(log.errorMessage).toContain("timeout");
+    });
+
+    it("lists email logs with candidate filter", async () => {
+      const logs = await prisma.emailLog.findMany({
+        where: { candidateId: testCandidateId },
+        include: {
+          candidate: { select: { firstName: true, lastName: true } },
+          sentBy: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { sentAt: "desc" },
+      });
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+      expect(logs[0].candidate.firstName).toBeDefined();
+    });
+
+    it("counts email logs by status", async () => {
+      const sentCount = await prisma.emailLog.count({
+        where: { sentById: testUserId, status: "sent" },
+      });
+      const failedCount = await prisma.emailLog.count({
+        where: { sentById: testUserId, status: "failed" },
+      });
+      expect(sentCount).toBeGreaterThanOrEqual(1);
+      expect(failedCount).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ─── Extended Dashboard Data ───
+  describe("Extended Dashboard Data", () => {
+    it("groups processes by stage (pipeline distribution)", async () => {
+      const pipeline = await prisma.process.groupBy({
+        by: ["stage"],
+        where: { closedAt: null },
+        _count: { id: true },
+      });
+      expect(Array.isArray(pipeline)).toBe(true);
+      pipeline.forEach((item) => {
+        expect(item.stage).toBeDefined();
+        expect(item._count.id).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it("fetches recent stage history", async () => {
+      const history = await prisma.processStageHistory.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          fromStage: true,
+          toStage: true,
+          createdAt: true,
+          changedBy: { select: { firstName: true, lastName: true } },
+          process: {
+            select: {
+              candidate: { select: { firstName: true, lastName: true } },
+              position: { select: { title: true } },
+              firm: { select: { name: true } },
+            },
+          },
+        },
+      });
+      expect(Array.isArray(history)).toBe(true);
+      if (history.length > 0) {
+        expect(history[0].toStage).toBeDefined();
+        expect(history[0].changedBy.firstName).toBeDefined();
+      }
+    });
+
+    it("fetches upcoming interviews", async () => {
+      const interviews = await prisma.interview.findMany({
+        where: { scheduledAt: { gte: new Date() }, isCompleted: false },
+        take: 5,
+        orderBy: { scheduledAt: "asc" },
+        select: {
+          id: true,
+          scheduledAt: true,
+          type: true,
+          process: {
+            select: {
+              candidate: { select: { firstName: true, lastName: true } },
+              firm: { select: { name: true } },
+              position: { select: { title: true } },
+            },
+          },
+        },
+      });
+      expect(Array.isArray(interviews)).toBe(true);
+    });
+  });
+
+  // ─── Audit Log Operations ───
+  describe("Audit Log Operations", () => {
+    let auditLogId: string;
+
+    it("creates an audit log entry", async () => {
+      const log = await prisma.auditLog.create({
+        data: {
+          userId: testUserId,
+          action: "candidate.create",
+          entityType: "Candidate",
+          entityId: testCandidateId,
+          changes: { after: { firstName: "Test", lastName: "Aday" } },
+        },
+      });
+
+      expect(log.id).toBeDefined();
+      expect(log.action).toBe("candidate.create");
+      expect(log.entityType).toBe("Candidate");
+      auditLogId = log.id;
+    });
+
+    it("creates an audit log with before/after diff", async () => {
+      const log = await prisma.auditLog.create({
+        data: {
+          userId: testUserId,
+          action: "firm.update",
+          entityType: "Firm",
+          entityId: testFirmId,
+          changes: {
+            before: { sector: "Bilişim" },
+            after: { sector: "Finans" },
+          },
+        },
+      });
+
+      expect(log.changes).toEqual({
+        before: { sector: "Bilişim" },
+        after: { sector: "Finans" },
+      });
+    });
+
+    it("lists audit logs with pagination", async () => {
+      const logs = await prisma.auditLog.findMany({
+        where: { userId: testUserId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        skip: 0,
+      });
+      expect(logs.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("filters audit logs by entityType", async () => {
+      const logs = await prisma.auditLog.findMany({
+        where: { userId: testUserId, entityType: "Candidate" },
+      });
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+      logs.forEach((l) => expect(l.entityType).toBe("Candidate"));
+    });
+
+    it("includes user relation on audit log", async () => {
+      const log = await prisma.auditLog.findUnique({
+        where: { id: auditLogId },
+        include: { user: { select: { firstName: true, lastName: true, email: true } } },
+      });
+      expect(log?.user.firstName).toBe("Test");
+      expect(log?.user.email).toBe("integration-test@talentflow.local");
+    });
+
+    it("counts audit logs for a user", async () => {
+      const count = await prisma.auditLog.count({
+        where: { userId: testUserId },
+      });
+      expect(count).toBeGreaterThanOrEqual(2);
+    });
+
+    it("filters audit logs by action pattern", async () => {
+      const logs = await prisma.auditLog.findMany({
+        where: {
+          userId: testUserId,
+          action: { contains: "create" },
+        },
+      });
+      expect(logs.length).toBeGreaterThanOrEqual(1);
+      logs.forEach((l) => expect(l.action).toContain("create"));
+    });
+  });
+
+  // ─── Reports Queries ───
+  describe("Reports Queries", () => {
+    it("groups processes by stage for pipeline report", async () => {
+      const pipeline = await prisma.process.groupBy({
+        by: ["stage"],
+        _count: { id: true },
+      });
+      expect(Array.isArray(pipeline)).toBe(true);
+      pipeline.forEach((item) => {
+        expect(item.stage).toBeDefined();
+        expect(item._count.id).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    it("groups candidates by status", async () => {
+      const statuses = await prisma.candidate.groupBy({
+        by: ["status"],
+        _count: { id: true },
+      });
+      expect(Array.isArray(statuses)).toBe(true);
+      statuses.forEach((item) => {
+        expect(["active", "passive"]).toContain(item.status);
+      });
+    });
+
+    it("gets firm activity (top firms by process count)", async () => {
+      const firmActivity = await prisma.process.groupBy({
+        by: ["firmId"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 10,
+      });
+      expect(Array.isArray(firmActivity)).toBe(true);
+    });
+
+    it("gets consultant performance (groupBy assignedToId)", async () => {
+      const performance = await prisma.process.groupBy({
+        by: ["assignedToId"],
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+      });
+      expect(Array.isArray(performance)).toBe(true);
+    });
+
+    it("applies date filter to process groupBy", async () => {
+      const lastYear = new Date();
+      lastYear.setFullYear(lastYear.getFullYear() - 1);
+
+      const pipeline = await prisma.process.groupBy({
+        by: ["stage"],
+        where: { createdAt: { gte: lastYear } },
+        _count: { id: true },
+      });
+      expect(Array.isArray(pipeline)).toBe(true);
+    });
+  });
+
+  // ─── Export Data Queries ───
+  describe("Export Data Queries", () => {
+    it("fetches candidates with export fields", async () => {
+      const candidates = await prisma.candidate.findMany({
+        where: { createdById: testUserId },
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          currentTitle: true,
+          currentSector: true,
+          totalExperienceYears: true,
+          city: true,
+          createdAt: true,
+        },
+        take: 100,
+      });
+      expect(candidates.length).toBeGreaterThanOrEqual(1);
+      expect(candidates[0].firstName).toBeDefined();
+    });
+
+    it("fetches processes with related data for export", async () => {
+      const processes = await prisma.process.findMany({
+        where: { createdById: testUserId },
+        include: {
+          candidate: { select: { firstName: true, lastName: true } },
+          firm: { select: { name: true } },
+          position: { select: { title: true } },
+          assignedTo: { select: { firstName: true, lastName: true } },
+        },
+        take: 100,
+      });
+      expect(processes.length).toBeGreaterThanOrEqual(1);
+      expect(processes[0].candidate.firstName).toBeDefined();
+      expect(processes[0].firm.name).toBeDefined();
+    });
+
+    it("fetches positions with firm and process count for export", async () => {
+      const positions = await prisma.position.findMany({
+        where: { createdById: testUserId },
+        include: {
+          firm: { select: { name: true } },
+          _count: { select: { processes: { where: { closedAt: null } } } },
+        },
+        take: 100,
+      });
+      expect(positions.length).toBeGreaterThanOrEqual(1);
+      expect(positions[0].firm.name).toBeDefined();
+    });
+
+    it("applies date filter to candidate export", async () => {
+      const lastYear = new Date();
+      lastYear.setFullYear(lastYear.getFullYear() - 1);
+
+      const candidates = await prisma.candidate.findMany({
+        where: {
+          createdById: testUserId,
+          createdAt: { gte: lastYear },
+        },
+        take: 100,
+      });
+      expect(Array.isArray(candidates)).toBe(true);
+    });
+
+    it("applies date filter to position export", async () => {
+      const lastYear = new Date();
+      lastYear.setFullYear(lastYear.getFullYear() - 1);
+
+      const positions = await prisma.position.findMany({
+        where: {
+          createdById: testUserId,
+          createdAt: { gte: lastYear },
+        },
+        include: { firm: { select: { name: true } } },
+        take: 100,
+      });
+      expect(Array.isArray(positions)).toBe(true);
+    });
+
+    it("respects safety limit of 5000 rows", async () => {
+      const candidates = await prisma.candidate.findMany({
+        take: 5000,
+      });
+      expect(candidates.length).toBeLessThanOrEqual(5000);
     });
   });
 

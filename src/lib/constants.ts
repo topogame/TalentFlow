@@ -75,3 +75,66 @@ export const INTERVIEW_TYPE_LABELS: Record<string, string> = {
   online: "Online",
   phone: "Telefon",
 };
+
+export const EMAIL_TEMPLATE_CATEGORIES = [
+  "mulakat_daveti",
+  "red_bildirimi",
+  "sunum",
+  "takip",
+  "genel",
+] as const;
+
+export const EMAIL_TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  mulakat_daveti: "Mülakat Daveti",
+  red_bildirimi: "Red Bildirimi",
+  sunum: "Sunum",
+  takip: "Takip",
+  genel: "Genel",
+};
+
+export const EMAIL_DYNAMIC_FIELDS = [
+  { key: "{candidateName}", label: "Aday Adı", description: "Adayın ad soyadı" },
+  { key: "{firmName}", label: "Firma Adı", description: "Firma adı" },
+  { key: "{position}", label: "Pozisyon", description: "Pozisyon başlığı" },
+  { key: "{interviewDate}", label: "Mülakat Tarihi", description: "Mülakat tarihi ve saati" },
+  { key: "{interviewType}", label: "Mülakat Türü", description: "Mülakat türü" },
+  { key: "{meetingLink}", label: "Toplantı Linki", description: "Online toplantı linki" },
+  { key: "{consultantName}", label: "Danışman Adı", description: "Sorumlu danışman" },
+] as const;
+
+// ─── Audit Log ───
+export const AUDIT_ACTIONS = [
+  "create",
+  "update",
+  "delete",
+  "stage_change",
+  "deactivate",
+] as const;
+
+export const AUDIT_ENTITY_TYPES = [
+  "User",
+  "Candidate",
+  "Firm",
+  "Position",
+  "Process",
+  "EmailTemplate",
+  "Interview",
+] as const;
+
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  create: "Oluşturma",
+  update: "Güncelleme",
+  delete: "Silme",
+  stage_change: "Aşama Değişikliği",
+  deactivate: "Devre Dışı Bırakma",
+};
+
+export const AUDIT_ENTITY_TYPE_LABELS: Record<string, string> = {
+  User: "Kullanıcı",
+  Candidate: "Aday",
+  Firm: "Firma",
+  Position: "Pozisyon",
+  Process: "Süreç",
+  EmailTemplate: "E-posta Şablonu",
+  Interview: "Mülakat",
+};

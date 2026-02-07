@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse } from "@/lib/utils";
 import { updatePositionSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
+import { createAuditLog, computeChanges } from "@/lib/audit";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -50,7 +51,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/positions/:id
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const { error } = await requireAuth();
+  const { session, error } = await requireAuth();
   if (error) return error;
 
   const { id } = await params;
@@ -87,6 +88,18 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     include: {
       firm: { select: { id: true, name: true } },
     },
+  });
+
+  const changes = computeChanges(
+    existing as unknown as Record<string, unknown>,
+    cleaned
+  );
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "update",
+    entityType: "Position",
+    entityId: id,
+    changes,
   });
 
   return NextResponse.json(successResponse(position));

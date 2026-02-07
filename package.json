@@ -1,6 +1,6 @@
 {
   "name": "talent-flow",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -20,12 +20,14 @@
     "@vercel/blob": "^2.2.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "prisma": "^6.19.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
+    "recharts": "^3.7.0",
     "resend": "^6.9.1",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.4.0",

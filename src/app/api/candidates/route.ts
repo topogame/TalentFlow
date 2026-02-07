@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
 import { createCandidateSchema, candidateListSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
+import { createAuditLog } from "@/lib/audit";
 
 // GET /api/candidates — List candidates with filtering
 export async function GET(request: NextRequest) {
@@ -129,6 +130,14 @@ export async function POST(request: NextRequest) {
     include: {
       languages: true,
     },
+  });
+
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "create",
+    entityType: "Candidate",
+    entityId: candidate.id,
+    changes: { created: cleaned },
   });
 
   return NextResponse.json(successResponse(candidate), { status: 201 });

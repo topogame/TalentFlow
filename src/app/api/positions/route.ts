@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
 import { createPositionSchema, paginationSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
+import { createAuditLog } from "@/lib/audit";
 
 // GET /api/positions — List positions
 export async function GET(request: NextRequest) {
@@ -111,6 +112,14 @@ export async function POST(request: NextRequest) {
     include: {
       firm: { select: { id: true, name: true } },
     },
+  });
+
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "create",
+    entityType: "Position",
+    entityId: position.id,
+    changes: { created: cleaned },
   });
 
   return NextResponse.json(successResponse(position), { status: 201 });

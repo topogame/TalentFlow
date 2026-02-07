@@ -18,6 +18,15 @@ import {
   stageChangeSchema,
   createInterviewSchema,
   updateInterviewSchema,
+  createEmailTemplateSchema,
+  updateEmailTemplateSchema,
+  emailTemplateListSchema,
+  sendEmailSchema,
+  emailLogListSchema,
+  calendarQuerySchema,
+  auditLogListSchema,
+  exportQuerySchema,
+  reportsQuerySchema,
 } from "./validations";
 
 // ─── Login Schema ───
@@ -640,6 +649,366 @@ describe("updateInterviewSchema", () => {
 
   it("rejects invalid meetingLink", () => {
     const result = updateInterviewSchema.safeParse({ meetingLink: "not-a-url" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Create Email Template Schema ───
+describe("createEmailTemplateSchema", () => {
+  const validTemplate = {
+    name: "Mülakat Daveti",
+    subject: "{candidateName} için mülakat daveti",
+    body: "Sayın {candidateName}, {firmName} firmasında {position} pozisyonu için mülakata davetlisiniz.",
+  };
+
+  it("accepts valid template", () => {
+    const result = createEmailTemplateSchema.safeParse(validTemplate);
+    expect(result.success).toBe(true);
+  });
+
+  it("defaults isActive to true", () => {
+    const result = createEmailTemplateSchema.safeParse(validTemplate);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.isActive).toBe(true);
+  });
+
+  it("accepts category", () => {
+    const result = createEmailTemplateSchema.safeParse({ ...validTemplate, category: "mulakat_daveti" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty name", () => {
+    const result = createEmailTemplateSchema.safeParse({ ...validTemplate, name: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty subject", () => {
+    const result = createEmailTemplateSchema.safeParse({ ...validTemplate, subject: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty body", () => {
+    const result = createEmailTemplateSchema.safeParse({ ...validTemplate, body: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing fields", () => {
+    const result = createEmailTemplateSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Update Email Template Schema ───
+describe("updateEmailTemplateSchema", () => {
+  it("accepts partial update", () => {
+    const result = updateEmailTemplateSchema.safeParse({ name: "Updated Name" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty object", () => {
+    const result = updateEmailTemplateSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts isActive false", () => {
+    const result = updateEmailTemplateSchema.safeParse({ isActive: false });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ─── Email Template List Schema ───
+describe("emailTemplateListSchema", () => {
+  it("provides defaults for empty query", () => {
+    const result = emailTemplateListSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.page).toBe(1);
+      expect(result.data.limit).toBe(20);
+    }
+  });
+
+  it("accepts search filter", () => {
+    const result = emailTemplateListSchema.safeParse({ search: "mülakat" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts category filter", () => {
+    const result = emailTemplateListSchema.safeParse({ category: "mulakat_daveti" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts isActive filter", () => {
+    const result = emailTemplateListSchema.safeParse({ isActive: "true" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.isActive).toBe(true);
+  });
+});
+
+// ─── Send Email Schema ───
+describe("sendEmailSchema", () => {
+  const validEmail = {
+    candidateId: "550e8400-e29b-41d4-a716-446655440000",
+    toEmail: "candidate@example.com",
+    subject: "Mülakat Daveti",
+    body: "Merhaba, mülakata davetlisiniz.",
+  };
+
+  it("accepts valid email data", () => {
+    const result = sendEmailSchema.safeParse(validEmail);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts with processId", () => {
+    const result = sendEmailSchema.safeParse({
+      ...validEmail,
+      processId: "550e8400-e29b-41d4-a716-446655440001",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts with templateId", () => {
+    const result = sendEmailSchema.safeParse({
+      ...validEmail,
+      templateId: "550e8400-e29b-41d4-a716-446655440002",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid candidateId", () => {
+    const result = sendEmailSchema.safeParse({ ...validEmail, candidateId: "bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid toEmail", () => {
+    const result = sendEmailSchema.safeParse({ ...validEmail, toEmail: "not-email" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty subject", () => {
+    const result = sendEmailSchema.safeParse({ ...validEmail, subject: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty body", () => {
+    const result = sendEmailSchema.safeParse({ ...validEmail, body: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid processId", () => {
+    const result = sendEmailSchema.safeParse({ ...validEmail, processId: "not-uuid" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Email Log List Schema ───
+describe("emailLogListSchema", () => {
+  it("provides defaults for empty query", () => {
+    const result = emailLogListSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.page).toBe(1);
+      expect(result.data.limit).toBe(20);
+    }
+  });
+
+  it("accepts candidateId filter", () => {
+    const result = emailLogListSchema.safeParse({
+      candidateId: "550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts status filter sent", () => {
+    const result = emailLogListSchema.safeParse({ status: "sent" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts status filter failed", () => {
+    const result = emailLogListSchema.safeParse({ status: "failed" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid status", () => {
+    const result = emailLogListSchema.safeParse({ status: "pending" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid candidateId", () => {
+    const result = emailLogListSchema.safeParse({ candidateId: "bad" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Calendar Query Schema ───
+describe("calendarQuerySchema", () => {
+  it("accepts valid date range", () => {
+    const result = calendarQuerySchema.safeParse({
+      start: "2025-01-01T00:00:00Z",
+      end: "2025-01-31T23:59:59Z",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.start).toBeInstanceOf(Date);
+      expect(result.data.end).toBeInstanceOf(Date);
+    }
+  });
+
+  it("coerces date strings to Date objects", () => {
+    const result = calendarQuerySchema.safeParse({
+      start: "2025-06-01",
+      end: "2025-06-30",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing start", () => {
+    const result = calendarQuerySchema.safeParse({ end: "2025-01-31" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing end", () => {
+    const result = calendarQuerySchema.safeParse({ start: "2025-01-01" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid date", () => {
+    const result = calendarQuerySchema.safeParse({ start: "not-a-date", end: "2025-01-31" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Audit Log List Schema ───
+describe("auditLogListSchema", () => {
+  it("provides defaults for empty query", () => {
+    const result = auditLogListSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.page).toBe(1);
+      expect(result.data.limit).toBe(20);
+    }
+  });
+
+  it("coerces string page/limit to number", () => {
+    const result = auditLogListSchema.safeParse({ page: "2", limit: "10" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.page).toBe(2);
+      expect(result.data.limit).toBe(10);
+    }
+  });
+
+  it("accepts valid entityType filter", () => {
+    const result = auditLogListSchema.safeParse({ entityType: "Candidate" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid UUID entityId", () => {
+    const result = auditLogListSchema.safeParse({ entityId: "550e8400-e29b-41d4-a716-446655440000" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid UUID for entityId", () => {
+    const result = auditLogListSchema.safeParse({ entityId: "not-uuid" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid UUID for userId", () => {
+    const result = auditLogListSchema.safeParse({ userId: "bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts action filter", () => {
+    const result = auditLogListSchema.safeParse({ action: "create" });
+    expect(result.success).toBe(true);
+  });
+
+  it("coerces dateFrom and dateTo strings to dates", () => {
+    const result = auditLogListSchema.safeParse({
+      dateFrom: "2025-01-01",
+      dateTo: "2025-12-31",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dateFrom).toBeInstanceOf(Date);
+      expect(result.data.dateTo).toBeInstanceOf(Date);
+    }
+  });
+});
+
+// ─── Export Query Schema ───
+describe("exportQuerySchema", () => {
+  it("provides default format xlsx for empty query", () => {
+    const result = exportQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.format).toBe("xlsx");
+    }
+  });
+
+  it("accepts valid date range", () => {
+    const result = exportQuerySchema.safeParse({
+      dateFrom: "2025-01-01",
+      dateTo: "2025-06-30",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dateFrom).toBeInstanceOf(Date);
+      expect(result.data.dateTo).toBeInstanceOf(Date);
+    }
+  });
+
+  it("accepts xlsx format", () => {
+    const result = exportQuerySchema.safeParse({ format: "xlsx" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid format", () => {
+    const result = exportQuerySchema.safeParse({ format: "csv" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid date string", () => {
+    const result = exportQuerySchema.safeParse({ dateFrom: "not-a-date" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Reports Query Schema ───
+describe("reportsQuerySchema", () => {
+  it("provides default period month for empty query", () => {
+    const result = reportsQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.period).toBe("month");
+    }
+  });
+
+  it("accepts valid period values", () => {
+    for (const period of ["week", "month", "quarter", "year"]) {
+      const result = reportsQuerySchema.safeParse({ period });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects invalid period", () => {
+    const result = reportsQuerySchema.safeParse({ period: "day" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts date range", () => {
+    const result = reportsQuerySchema.safeParse({
+      dateFrom: "2025-01-01",
+      dateTo: "2025-12-31",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dateFrom).toBeInstanceOf(Date);
+      expect(result.data.dateTo).toBeInstanceOf(Date);
+    }
+  });
+
+  it("rejects invalid date", () => {
+    const result = reportsQuerySchema.safeParse({ dateFrom: "xyz" });
     expect(result.success).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse } from "@/lib/utils";
 import { stageChangeSchema } from "@/lib/validations";
 import { CLOSED_STAGES } from "@/lib/constants";
+import { createAuditLog } from "@/lib/audit";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -77,6 +78,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     return updated;
+  });
+
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "stage_change",
+    entityType: "Process",
+    entityId: id,
+    changes: { before: { stage: existing.stage }, after: { stage: newStage } },
   });
 
   return NextResponse.json(successResponse(process));

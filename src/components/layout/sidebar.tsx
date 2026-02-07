@@ -171,7 +171,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-800 px-4 py-3">
-        <p className="text-[11px] text-slate-600">v0.1.0 — Beta</p>
+        <p className="text-[11px] text-slate-600">v1.0.0 — MVP</p>
       </div>
     </aside>
   );

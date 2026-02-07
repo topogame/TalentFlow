@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
 import { createFirmSchema, paginationSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
+import { createAuditLog } from "@/lib/audit";
 
 // GET /api/firms — List firms
 export async function GET(request: NextRequest) {
@@ -96,6 +97,14 @@ export async function POST(request: NextRequest) {
       ...(cleaned as Prisma.FirmUncheckedCreateInput),
       createdById: session!.user.id,
     },
+  });
+
+  await createAuditLog({
+    userId: session!.user.id,
+    action: "create",
+    entityType: "Firm",
+    entityId: firm.id,
+    changes: { created: cleaned },
   });
 
   return NextResponse.json(successResponse(firm), { status: 201 });
