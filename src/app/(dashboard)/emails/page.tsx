@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { EMAIL_TEMPLATE_CATEGORY_LABELS, EMAIL_DYNAMIC_FIELDS } from "@/lib/constants";
 
 type Template = {
@@ -222,7 +222,10 @@ export default function EmailsPage() {
     const json = await res.json();
 
     if (!json.success) {
-      setFormError(json.error || "Bir hata oluştu");
+      const errMsg = typeof json.error === "string"
+        ? json.error
+        : json.error?.message || "Bir hata oluştu";
+      setFormError(errMsg);
       setSaving(false);
       return;
     }
@@ -357,7 +360,10 @@ export default function EmailsPage() {
       const json = await res.json();
 
       if (!json.success) {
-        setComposeError(json.error || "E-posta gönderilemedi.");
+        const errMsg = typeof json.error === "string"
+          ? json.error
+          : json.error?.message || "E-posta gönderilemedi.";
+        setComposeError(errMsg);
         setSending(false);
         return;
       }
@@ -875,9 +881,8 @@ export default function EmailsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {emails.map((e) => (
-                    <>
+                    <Fragment key={e.id}>
                       <tr
-                        key={e.id}
                         onClick={() => setExpandedEmail(expandedEmail === e.id ? null : e.id)}
                         className="cursor-pointer hover:bg-slate-50/50 transition-colors"
                       >
@@ -907,7 +912,7 @@ export default function EmailsPage() {
                         </td>
                       </tr>
                       {expandedEmail === e.id && (
-                        <tr key={`${e.id}-body`}>
+                        <tr>
                           <td colSpan={6} className="bg-slate-50 px-4 py-4">
                             <div className="rounded-lg bg-white p-4 text-sm text-slate-700 whitespace-pre-wrap border border-slate-200">
                               {e.body}
@@ -918,7 +923,7 @@ export default function EmailsPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
