@@ -103,7 +103,11 @@ export default function SettingsPage() {
       if (auditFilters.entityType) params.set("entityType", auditFilters.entityType);
       if (auditFilters.action) params.set("action", auditFilters.action);
       if (auditFilters.dateFrom) params.set("dateFrom", new Date(auditFilters.dateFrom).toISOString());
-      if (auditFilters.dateTo) params.set("dateTo", new Date(auditFilters.dateTo).toISOString());
+      if (auditFilters.dateTo) {
+        const endOfDay = new Date(auditFilters.dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        params.set("dateTo", endOfDay.toISOString());
+      }
 
       const res = await fetch(`/api/audit-logs?${params}`);
       const data = await res.json();
@@ -362,7 +366,8 @@ export default function SettingsPage() {
                 <p className="mt-3 text-sm text-slate-500">Henüz kullanıcı yok</p>
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-slate-100">
+              <div className="overflow-x-auto">
+              <table className="min-w-[750px] divide-y divide-slate-100 md:min-w-full">
                 <thead>
                   <tr className="bg-slate-50/80">
                     <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Kullanıcı</th>
@@ -410,6 +415,7 @@ export default function SettingsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -495,7 +501,8 @@ export default function SettingsPage() {
                 <p className="mt-3 text-sm text-slate-500">Denetim kaydı bulunamadı</p>
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-slate-100">
+              <div className="overflow-x-auto">
+              <table className="min-w-[700px] divide-y divide-slate-100 md:min-w-full">
                 <thead>
                   <tr className="bg-slate-50/80">
                     <th className="w-8 px-3 py-3.5"></th>
@@ -590,6 +597,7 @@ export default function SettingsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PIPELINE_STAGE_LABELS } from "@/lib/constants";
+import { PIPELINE_STAGE_LABELS, STAGE_COLORS } from "@/lib/constants";
 
 type Candidate = {
   id: string;
@@ -13,6 +13,8 @@ type Candidate = {
   phone: string | null;
   linkedinUrl: string | null;
   educationLevel: string | null;
+  universityName: string | null;
+  universityDepartment: string | null;
   totalExperienceYears: number | null;
   currentSector: string | null;
   currentTitle: string | null;
@@ -39,6 +41,17 @@ type Note = {
   createdAt: string;
 };
 
+type ProcessItem = {
+  id: string;
+  stage: string;
+  fitnessScore: number | null;
+  closedAt: string | null;
+  updatedAt: string;
+  firm: { id: string; name: string };
+  position: { id: string; title: string };
+  assignedTo: { firstName: string; lastName: string } | null;
+};
+
 const LANGUAGE_LABELS: Record<string, string> = {
   beginner: "Başlangıç",
   intermediate: "Orta",
@@ -55,6 +68,7 @@ export default function CandidateDetailPage() {
   const [activeTab, setActiveTab] = useState("summary");
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [processes, setProcesses] = useState<ProcessItem[]>([]);
 
   const fetchCandidate = useCallback(async () => {
     const res = await fetch(`/api/candidates/${id}`);
@@ -70,10 +84,21 @@ export default function CandidateDetailPage() {
     if (data.success) setNotes(data.data);
   }, [id]);
 
+  const fetchProcesses = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/processes?candidateId=${id}&limit=50`);
+      const data = await res.json();
+      if (data.success) setProcesses(data.data);
+    } catch {
+      // silently ignore — processes tab will show empty state
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchCandidate();
     fetchNotes();
-  }, [fetchCandidate, fetchNotes]);
+    fetchProcesses();
+  }, [fetchCandidate, fetchNotes, fetchProcesses]);
 
   async function handleAddNote(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +124,7 @@ export default function CandidateDetailPage() {
 
   const tabs = [
     { key: "summary", label: "Özet" },
+    { key: "processes", label: `Süreçler (${processes.length})` },
     { key: "notes", label: `Notlar (${notes.length})` },
     { key: "documents", label: `Belgeler (${candidate.documents.length})` },
   ];
@@ -239,6 +265,14 @@ export default function CandidateDetailPage() {
                   <dd className="text-slate-900">{candidate.educationLevel || "—"}</dd>
                 </div>
                 <div className="flex justify-between">
+                  <dt className="text-slate-500">Üniversite</dt>
+                  <dd className="text-slate-900">{candidate.universityName || "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">Bölüm</dt>
+                  <dd className="text-slate-900">{candidate.universityDepartment || "—"}</dd>
+                </div>
+                <div className="flex justify-between">
                   <dt className="text-slate-500">Maaş Beklentisi</dt>
                   <dd className="text-slate-900">
                     {candidate.salaryExpectation
@@ -310,6 +344,48 @@ export default function CandidateDetailPage() {
                 </div>
               </dl>
             </div>
+          </div>
+        )}
+
+        {activeTab === "processes" && (
+          <div>
+            {processes.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm">
+                <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                </svg>
+                <p className="mt-3 text-sm text-slate-500">Henüz süreç kaydı yok</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {processes.map((proc) => (
+                  <Link
+                    key={proc.id}
+                    href={`/processes/${proc.id}`}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-indigo-200 hover:bg-indigo-50/30"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {proc.position.title}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {proc.firm.name}
+                        {proc.assignedTo
+                          ? ` · Sorumlu: ${proc.assignedTo.firstName} ${proc.assignedTo.lastName}`
+                          : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Son güncelleme: {new Date(proc.updatedAt).toLocaleDateString("tr-TR")}
+                        {proc.closedAt && ` · Kapandı: ${new Date(proc.closedAt).toLocaleDateString("tr-TR")}`}
+                      </p>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STAGE_COLORS[proc.stage] || "bg-slate-100 text-slate-700"}`}>
+                      {PIPELINE_STAGE_LABELS[proc.stage] || proc.stage}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

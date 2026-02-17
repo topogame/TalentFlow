@@ -31,6 +31,22 @@ type EmailLog = {
 
 type Pagination = { page: number; limit: number; total: number; totalPages: number };
 
+type CandidateOption = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  currentTitle: string | null;
+};
+
+type ComposeTemplate = {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  category: string | null;
+};
+
 export default function EmailsPage() {
   const [activeTab, setActiveTab] = useState<"templates" | "sent">("templates");
 
@@ -57,6 +73,24 @@ export default function EmailsPage() {
 
   // Expanded email
   const [expandedEmail, setExpandedEmail] = useState<string | null>(null);
+
+  // ─── Compose Modal State ───
+  const [showCompose, setShowCompose] = useState(false);
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [candidateResults, setCandidateResults] = useState<CandidateOption[]>([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateOption | null>(null);
+  const [showCandidateDropdown, setShowCandidateDropdown] = useState(false);
+  const [composeTemplates, setComposeTemplates] = useState<ComposeTemplate[]>([]);
+  const [loadingComposeTemplates, setLoadingComposeTemplates] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [composeError, setComposeError] = useState("");
+  const [composeSuccess, setComposeSuccess] = useState("");
+  const candidateSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const candidateDropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchTemplates = useCallback(async () => {
     setLoadingTemplates(true);
@@ -90,6 +124,74 @@ export default function EmailsPage() {
   useEffect(() => {
     if (activeTab === "sent") fetchEmails();
   }, [activeTab, fetchEmails]);
+
+  // Close candidate dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        candidateDropdownRef.current &&
+        !candidateDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowCandidateDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch compose templates when modal opens
+  useEffect(() => {
+    if (showCompose) {
+      setLoadingComposeTemplates(true);
+      fetch("/api/email-templates?isActive=true&limit=50")
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success) {
+            setComposeTemplates(json.data);
+          }
+        })
+        .finally(() => setLoadingComposeTemplates(false));
+    }
+  }, [showCompose]);
+
+  // Search candidates with debounce
+  useEffect(() => {
+    if (!candidateSearch.trim()) {
+      setCandidateResults([]);
+      setShowCandidateDropdown(false);
+      return;
+    }
+
+    if (candidateSearchTimer.current) {
+      clearTimeout(candidateSearchTimer.current);
+    }
+
+    candidateSearchTimer.current = setTimeout(async () => {
+      setLoadingCandidates(true);
+      try {
+        const params = new URLSearchParams({
+          search: candidateSearch.trim(),
+          limit: "10",
+        });
+        const res = await fetch(`/api/candidates?${params}`);
+        const json = await res.json();
+        if (json.success) {
+          setCandidateResults(json.data);
+          setShowCandidateDropdown(true);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoadingCandidates(false);
+      }
+    }, 300);
+
+    return () => {
+      if (candidateSearchTimer.current) {
+        clearTimeout(candidateSearchTimer.current);
+      }
+    };
+  }, [candidateSearch]);
 
   function resetForm() {
     setForm({ name: "", subject: "", body: "", category: "" });
@@ -152,6 +254,131 @@ export default function EmailsPage() {
     }, 0);
   }
 
+  // ─── Compose helpers ───
+  function openCompose() {
+    setShowCompose(true);
+    setCandidateSearch("");
+    setCandidateResults([]);
+    setSelectedCandidate(null);
+    setSelectedTemplateId("");
+    setComposeSubject("");
+    setComposeBody("");
+    setComposeError("");
+    setComposeSuccess("");
+    setSending(false);
+    setShowCandidateDropdown(false);
+  }
+
+  function closeCompose() {
+    setShowCompose(false);
+    setComposeError("");
+    setComposeSuccess("");
+  }
+
+  function selectCandidate(c: CandidateOption) {
+    setSelectedCandidate(c);
+    setCandidateSearch(`${c.firstName} ${c.lastName}`);
+    setShowCandidateDropdown(false);
+
+    // Re-apply template variables if a template was already selected
+    if (selectedTemplateId) {
+      const tpl = composeTemplates.find((t) => t.id === selectedTemplateId);
+      if (tpl) {
+        setComposeSubject(replaceTemplateVars(tpl.subject, c));
+        setComposeBody(replaceTemplateVars(tpl.body, c));
+      }
+    }
+  }
+
+  function replaceTemplateVars(text: string, candidate: CandidateOption | null): string {
+    if (!candidate) return text;
+    return text
+      .replace(/\{candidateName\}/g, `${candidate.firstName} ${candidate.lastName}`)
+      .replace(/\{\{candidateName\}\}/g, `${candidate.firstName} ${candidate.lastName}`)
+      .replace(/\{firstName\}/g, candidate.firstName)
+      .replace(/\{\{firstName\}\}/g, candidate.firstName)
+      .replace(/\{lastName\}/g, candidate.lastName)
+      .replace(/\{\{lastName\}\}/g, candidate.lastName);
+  }
+
+  function handleTemplateSelect(templateId: string) {
+    setSelectedTemplateId(templateId);
+    if (!templateId) {
+      setComposeSubject("");
+      setComposeBody("");
+      return;
+    }
+    const tpl = composeTemplates.find((t) => t.id === templateId);
+    if (tpl) {
+      setComposeSubject(replaceTemplateVars(tpl.subject, selectedCandidate));
+      setComposeBody(replaceTemplateVars(tpl.body, selectedCandidate));
+    }
+  }
+
+  async function handleSendEmail() {
+    setComposeError("");
+    setComposeSuccess("");
+
+    if (!selectedCandidate) {
+      setComposeError("Lütfen bir aday seçin.");
+      return;
+    }
+    if (!selectedCandidate.email) {
+      setComposeError("Seçilen adayın e-posta adresi bulunmuyor.");
+      return;
+    }
+    if (!composeSubject.trim()) {
+      setComposeError("Konu alanı boş bırakılamaz.");
+      return;
+    }
+    if (!composeBody.trim()) {
+      setComposeError("İçerik alanı boş bırakılamaz.");
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const payload: Record<string, string> = {
+        candidateId: selectedCandidate.id,
+        toEmail: selectedCandidate.email,
+        subject: composeSubject.trim(),
+        body: composeBody.trim(),
+      };
+      if (selectedTemplateId) {
+        payload.templateId = selectedTemplateId;
+      }
+
+      const res = await fetch("/api/emails/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        setComposeError(json.error || "E-posta gönderilemedi.");
+        setSending(false);
+        return;
+      }
+
+      setComposeSuccess("E-posta başarıyla gönderildi!");
+      // Refresh sent emails list if currently on that tab
+      if (activeTab === "sent") {
+        fetchEmails();
+      }
+
+      // Auto-close after 1.5s
+      setTimeout(() => {
+        closeCompose();
+      }, 1500);
+    } catch {
+      setComposeError("Bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   const tabs = [
     { key: "templates" as const, label: "Şablonlar" },
     { key: "sent" as const, label: "Gönderilmiş" },
@@ -167,18 +394,235 @@ export default function EmailsPage() {
           <h1 className="text-2xl font-bold text-slate-900">E-postalar</h1>
           <p className="mt-1 text-sm text-slate-500">E-posta şablonları ve gönderim geçmişi</p>
         </div>
-        {activeTab === "templates" && (
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => { resetForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            onClick={openCompose}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 transition-colors"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
             </svg>
-            Yeni Şablon
+            Yeni E-posta
           </button>
-        )}
+          {activeTab === "templates" && (
+            <button
+              onClick={() => { resetForm(); setShowForm(true); }}
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Yeni Şablon
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Compose Modal */}
+      {showCompose && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 rounded-t-xl">
+              <h3 className="text-lg font-semibold text-slate-900">Yeni E-posta Gönder</h3>
+              <button
+                onClick={closeCompose}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-5 space-y-5">
+              {composeError && (
+                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{composeError}</div>
+              )}
+              {composeSuccess && (
+                <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{composeSuccess}</div>
+              )}
+
+              {/* Candidate Search */}
+              <div ref={candidateDropdownRef} className="relative">
+                <label className="block text-sm font-medium text-slate-700">Aday *</label>
+                {selectedCandidate ? (
+                  <div className="mt-1.5 flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50/50 px-4 py-2.5">
+                    <div>
+                      <span className="text-sm font-medium text-slate-900">
+                        {selectedCandidate.firstName} {selectedCandidate.lastName}
+                      </span>
+                      {selectedCandidate.email && (
+                        <span className="ml-2 text-sm text-slate-500">({selectedCandidate.email})</span>
+                      )}
+                      {selectedCandidate.currentTitle && (
+                        <span className="ml-2 text-xs text-slate-400">- {selectedCandidate.currentTitle}</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedCandidate(null);
+                        setCandidateSearch("");
+                        setCandidateResults([]);
+                      }}
+                      className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <input
+                        className={inputClass}
+                        value={candidateSearch}
+                        onChange={(e) => setCandidateSearch(e.target.value)}
+                        onFocus={() => {
+                          if (candidateResults.length > 0) setShowCandidateDropdown(true);
+                        }}
+                        placeholder="Aday adı veya e-posta ile arayın..."
+                      />
+                      {loadingCandidates && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
+                          <svg className="h-4 w-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    {showCandidateDropdown && candidateResults.length > 0 && (
+                      <div className="absolute left-0 right-0 z-20 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                        {candidateResults.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => selectCandidate(c)}
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-indigo-50 transition-colors"
+                          >
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700">
+                              {c.firstName.charAt(0)}{c.lastName.charAt(0)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-slate-900 truncate">
+                                {c.firstName} {c.lastName}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate">
+                                {c.email || "E-posta yok"}
+                                {c.currentTitle ? ` - ${c.currentTitle}` : ""}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {showCandidateDropdown && candidateSearch.trim() && !loadingCandidates && candidateResults.length === 0 && (
+                      <div className="absolute left-0 right-0 z-20 mt-1 rounded-lg border border-slate-200 bg-white p-3 text-center shadow-lg">
+                        <p className="text-sm text-slate-500">Sonuc bulunamadi.</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Template Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Sablon</label>
+                <select
+                  className={inputClass}
+                  value={selectedTemplateId}
+                  onChange={(e) => handleTemplateSelect(e.target.value)}
+                  disabled={loadingComposeTemplates}
+                >
+                  <option value="">
+                    {loadingComposeTemplates ? "Yükleniyor..." : "Sablon seçin (isteğe bağlı)"}
+                  </option>
+                  {composeTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                      {t.category
+                        ? ` (${EMAIL_TEMPLATE_CATEGORY_LABELS[t.category] || t.category})`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Konu *</label>
+                <input
+                  className={inputClass}
+                  value={composeSubject}
+                  onChange={(e) => setComposeSubject(e.target.value)}
+                  placeholder="E-posta konusu"
+                />
+              </div>
+
+              {/* Body */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Icerik *</label>
+                <textarea
+                  className={`${inputClass} min-h-[180px]`}
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                  placeholder="E-posta içeriğini yazın..."
+                />
+              </div>
+
+              {/* Recipient info */}
+              {selectedCandidate && (
+                <div className="rounded-lg bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Alici</p>
+                  <p className="mt-1 text-sm text-slate-700">
+                    {selectedCandidate.firstName} {selectedCandidate.lastName}
+                    {selectedCandidate.email ? (
+                      <span className="ml-1 text-slate-500">&lt;{selectedCandidate.email}&gt;</span>
+                    ) : (
+                      <span className="ml-1 text-red-500">(E-posta adresi yok)</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-slate-200 bg-white px-6 py-4 rounded-b-xl">
+              <button
+                onClick={closeCompose}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Iptal
+              </button>
+              <button
+                onClick={handleSendEmail}
+                disabled={sending || !!composeSuccess}
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              >
+                {sending ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                    Gönder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mt-6 flex gap-1 rounded-xl bg-slate-100 p-1">

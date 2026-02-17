@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       type: true,
       meetingLink: true,
       location: true,
+      notes: true,
       isCompleted: true,
       process: {
         select: {

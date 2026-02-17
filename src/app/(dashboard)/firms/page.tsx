@@ -105,7 +105,8 @@ export default function FirmsPage() {
             <p className="mt-3 text-sm text-slate-500">Firma bulunamadı</p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-slate-100">
+          <div className="overflow-x-auto">
+          <table className="min-w-[600px] divide-y divide-slate-100 md:min-w-full">
             <thead>
               <tr className="bg-slate-50/80">
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -167,6 +168,7 @@ export default function FirmsPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

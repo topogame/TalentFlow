@@ -23,7 +23,7 @@ export function Header() {
     (session?.user?.firstName?.[0] || "") + (session?.user?.lastName?.[0] || "");
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-slate-200 bg-white px-6">
+    <header className="hidden h-16 items-center justify-between border-b border-slate-200 bg-white px-6 md:flex">
       <div />
 
       <div className="relative" ref={menuRef}>

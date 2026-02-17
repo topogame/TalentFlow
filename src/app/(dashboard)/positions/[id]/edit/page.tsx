@@ -1,33 +1,71 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 
 type FirmOption = { id: string; name: string };
 
-export default function NewPositionPage() {
-  return (
-    <Suspense fallback={<div className="animate-pulse-soft text-center text-slate-400">Yükleniyor...</div>}>
-      <NewPositionForm />
-    </Suspense>
-  );
-}
+type Position = {
+  id: string;
+  title: string;
+  department: string | null;
+  status: string;
+  priority: string;
+  city: string | null;
+  country: string | null;
+  workModel: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryCurrency: string | null;
+  minExperienceYears: number | null;
+  description: string | null;
+  requirements: string | null;
+  firm: { id: string; name: string };
+};
 
-function NewPositionForm() {
+export default function EditPositionPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const preselectedFirmId = searchParams.get("firmId") || "";
+  const params = useParams();
+  const id = params.id as string;
+
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [firms, setFirms] = useState<FirmOption[]>([]);
+  const [position, setPosition] = useState<Position | null>(null);
 
   useEffect(() => {
-    fetch("/api/firms?limit=100")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setFirms(data.data);
-      });
-  }, []);
+    async function fetchData() {
+      try {
+        const [posRes, firmsRes] = await Promise.all([
+          fetch(`/api/positions/${id}`),
+          fetch("/api/firms?limit=100"),
+        ]);
+
+        const posData = await posRes.json();
+        const firmsData = await firmsRes.json();
+
+        if (!posData.success) {
+          setError(posData.error?.message || "Pozisyon bulunamadı");
+          setLoading(false);
+          return;
+        }
+
+        setPosition(posData.data);
+
+        if (firmsData.success) {
+          setFirms(firmsData.data);
+        }
+      } catch {
+        setError("Veriler yüklenirken bir hata oluştu");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [id]);
 
   const inputClass =
     "mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -35,6 +73,7 @@ function NewPositionForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setSaving(true);
 
     const formData = new FormData(e.currentTarget);
@@ -57,8 +96,8 @@ function NewPositionForm() {
     };
 
     try {
-      const res = await fetch("/api/positions", {
-        method: "POST",
+      const res = await fetch(`/api/positions/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -67,24 +106,80 @@ function NewPositionForm() {
         setError(data.error?.message || "Bir hata oluştu");
         return;
       }
-      router.push(`/positions/${data.data.id}`);
+      setSuccess("Pozisyon başarıyla güncellendi");
+      setTimeout(() => {
+        router.push(`/positions/${id}`);
+      }, 1000);
+    } catch {
+      setError("Bir hata oluştu");
     } finally {
       setSaving(false);
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            className="h-8 w-8 animate-spin text-indigo-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          <p className="text-sm text-slate-500">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!position) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-slate-500">{error || "Pozisyon bulunamadı"}</p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            Geri Dön
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Yeni Pozisyon</h1>
-        <p className="mt-1 text-sm text-slate-500">Firmaya yeni bir açık pozisyon ekleyin</p>
+        <h1 className="text-2xl font-bold text-slate-900">Pozisyon Düzenle</h1>
+        <p className="mt-1 text-sm text-slate-500">Pozisyon bilgilerini güncelleyin</p>
       </div>
 
       {error && (
         <div className="mb-6 rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>
       )}
 
+      {success && (
+        <div className="mb-6 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-600">{success}</div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Card 1 - Pozisyon Bilgileri */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
@@ -97,7 +192,7 @@ function NewPositionForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Firma *</label>
-              <select name="firmId" required defaultValue={preselectedFirmId} className={inputClass}>
+              <select name="firmId" required defaultValue={position.firm.id} className={inputClass}>
                 <option value="">Firma seçin</option>
                 {firms.map((f) => (
                   <option key={f.id} value={f.id}>
@@ -108,15 +203,15 @@ function NewPositionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Pozisyon Başlığı *</label>
-              <input name="title" type="text" required className={inputClass} />
+              <input name="title" type="text" required defaultValue={position.title} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Departman</label>
-              <input name="department" type="text" className={inputClass} />
+              <input name="department" type="text" defaultValue={position.department ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Öncelik</label>
-              <select name="priority" defaultValue="normal" className={inputClass}>
+              <select name="priority" defaultValue={position.priority} className={inputClass}>
                 <option value="low">Düşük</option>
                 <option value="normal">Normal</option>
                 <option value="high">Yüksek</option>
@@ -125,11 +220,18 @@ function NewPositionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Gerekli Deneyim (Yıl)</label>
-              <input name="minExperienceYears" type="number" min="0" max="50" className={inputClass} />
+              <input
+                name="minExperienceYears"
+                type="number"
+                min="0"
+                max="50"
+                defaultValue={position.minExperienceYears ?? ""}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Çalışma Modeli</label>
-              <select name="workModel" className={inputClass}>
+              <select name="workModel" defaultValue={position.workModel ?? ""} className={inputClass}>
                 <option value="">Seçiniz</option>
                 <option value="office">Ofis</option>
                 <option value="remote">Uzaktan</option>
@@ -138,11 +240,12 @@ function NewPositionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Şehir</label>
-              <input name="city" type="text" className={inputClass} />
+              <input name="city" type="text" defaultValue={position.city ?? ""} className={inputClass} />
             </div>
           </div>
         </div>
 
+        {/* Card 2 - Maaş Aralığı */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
@@ -155,15 +258,27 @@ function NewPositionForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-slate-700">Minimum</label>
-              <input name="salaryMin" type="number" min="0" className={inputClass} />
+              <input
+                name="salaryMin"
+                type="number"
+                min="0"
+                defaultValue={position.salaryMin ?? ""}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Maksimum</label>
-              <input name="salaryMax" type="number" min="0" className={inputClass} />
+              <input
+                name="salaryMax"
+                type="number"
+                min="0"
+                defaultValue={position.salaryMax ?? ""}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Para Birimi</label>
-              <select name="salaryCurrency" defaultValue="TRY" className={inputClass}>
+              <select name="salaryCurrency" defaultValue={position.salaryCurrency ?? "TRY"} className={inputClass}>
                 <option value="TRY">TRY</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
@@ -172,6 +287,7 @@ function NewPositionForm() {
           </div>
         </div>
 
+        {/* Card 3 - Detaylar */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50">
@@ -184,26 +300,37 @@ function NewPositionForm() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700">Açıklama</label>
-              <textarea name="description" rows={4} className={inputClass} />
+              <textarea
+                name="description"
+                rows={4}
+                defaultValue={position.description ?? ""}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Gereksinimler</label>
-              <textarea name="requirements" rows={4} className={inputClass} />
+              <textarea
+                name="requirements"
+                rows={4}
+                defaultValue={position.requirements ?? ""}
+                className={inputClass}
+              />
             </div>
           </div>
         </div>
 
+        {/* Buttons */}
         <div className="flex gap-3">
           <button
             type="submit"
             disabled={saving}
             className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50"
           >
-            {saving ? "Kaydediliyor..." : "Kaydet"}
+            {saving ? "Kaydediliyor..." : "Güncelle"}
           </button>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push(`/positions/${id}`)}
             className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
             İptal

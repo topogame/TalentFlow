@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
       firm: { select: { name: true } },
       position: { select: { title: true } },
       assignedTo: { select: { firstName: true, lastName: true } },
+      notes: { orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { createdAt: "desc" },
     take: 5000,
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
     { header: "Aşama", key: "stage", width: 20 },
     { header: "Uyum Puanı", key: "fitnessScore", width: 12 },
     { header: "Danışman", key: "assignedTo", width: 20 },
+    { header: "Notlar", key: "latestNote", width: 40 },
     { header: "Başlangıç", key: "createdAt", width: 18 },
     { header: "Kapanış", key: "closedAt", width: 18 },
   ];
@@ -61,6 +63,7 @@ export async function GET(request: NextRequest) {
     assignedTo: p.assignedTo
       ? `${p.assignedTo.firstName} ${p.assignedTo.lastName}`
       : "",
+    latestNote: p.notes[0]?.content || "",
     createdAt: p.createdAt.toLocaleDateString("tr-TR"),
     closedAt: p.closedAt ? p.closedAt.toLocaleDateString("tr-TR") : "",
   }));

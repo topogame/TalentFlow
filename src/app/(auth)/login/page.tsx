@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const isRedirected = searchParams.has("callbackUrl");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -29,7 +32,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(callbackUrl);
     router.refresh();
   }
 
@@ -48,6 +51,11 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {isRedirected && !error && (
+          <div className="rounded-lg bg-indigo-50 p-3.5 text-sm text-indigo-700">
+            Devam etmek için giriş yapın
+          </div>
+        )}
         {error && (
           <div className="rounded-lg bg-rose-50 p-3.5 text-sm text-rose-600">
             {error}
@@ -108,5 +116,29 @@ export default function LoginPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="animate-fade-in rounded-2xl bg-white/95 p-10 shadow-2xl backdrop-blur-sm">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600">
+              <span className="text-lg font-bold text-white">T</span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Talent<span className="text-indigo-600">Flow</span>
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Aday Veri Tabanı ve Süreç Yönetim Sistemi
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

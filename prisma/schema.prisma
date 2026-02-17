@@ -124,6 +124,8 @@ model Candidate {
   phone                String?         @db.VarChar(30)
   linkedinUrl          String?         @map("linkedin_url") @db.VarChar(500)
   educationLevel       String?         @map("education_level") @db.VarChar(100)
+  universityName       String?         @map("university_name") @db.VarChar(200)
+  universityDepartment String?         @map("university_department") @db.VarChar(200)
   totalExperienceYears Int?            @map("total_experience_years")
   currentSector        String?         @map("current_sector") @db.VarChar(200)
   currentTitle         String?         @map("current_title") @db.VarChar(200)

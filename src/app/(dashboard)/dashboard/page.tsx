@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   BarChart,
   Bar,
@@ -56,6 +57,7 @@ const statCards = [
   {
     key: "activeCandidates" as const,
     title: "Aktif Adaylar",
+    href: "/candidates",
     accent: "border-indigo-500",
     iconBg: "bg-indigo-50",
     iconColor: "text-indigo-600",
@@ -68,6 +70,7 @@ const statCards = [
   {
     key: "openPositions" as const,
     title: "Açık Pozisyonlar",
+    href: "/positions",
     accent: "border-emerald-500",
     iconBg: "bg-emerald-50",
     iconColor: "text-emerald-600",
@@ -80,6 +83,7 @@ const statCards = [
   {
     key: "weekInterviews" as const,
     title: "Bu Hafta Mülakatlar",
+    href: "/calendar",
     accent: "border-amber-500",
     iconBg: "bg-amber-50",
     iconColor: "text-amber-600",
@@ -92,6 +96,7 @@ const statCards = [
   {
     key: "activeProcesses" as const,
     title: "Aktif Süreçler",
+    href: "/processes",
     accent: "border-sky-500",
     iconBg: "bg-sky-50",
     iconColor: "text-sky-600",
@@ -185,9 +190,10 @@ export default function DashboardPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {statCards.map((card) => (
-          <div
+          <Link
             key={card.key}
-            className={`rounded-xl border-l-4 ${card.accent} bg-white p-6 shadow-sm transition-shadow duration-200 hover:shadow-md`}
+            href={card.href}
+            className={`block rounded-xl border-l-4 ${card.accent} bg-white p-6 shadow-sm transition-all duration-200 hover:border-indigo-200 hover:shadow-md cursor-pointer`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -204,7 +210,7 @@ export default function DashboardPage() {
                 {card.icon}
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

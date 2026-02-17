@@ -64,3 +64,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json(successResponse(updated));
 }
+
+// DELETE /api/processes/:id/interviews/:interviewId
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  const { error } = await requireAuth();
+  if (error) return error;
+
+  const { id, interviewId } = await params;
+
+  const interview = await prisma.interview.findFirst({
+    where: { id: interviewId, processId: id },
+  });
+  if (!interview) {
+    return NextResponse.json(errorResponse("NOT_FOUND", "Mülakat bulunamadı"), { status: 404 });
+  }
+
+  await prisma.interview.delete({ where: { id: interviewId } });
+
+  return NextResponse.json(successResponse({ deleted: true }));
+}

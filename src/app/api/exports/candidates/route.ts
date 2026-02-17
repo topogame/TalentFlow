@@ -30,7 +30,10 @@ export async function GET(request: NextRequest) {
 
   const candidates = await prisma.candidate.findMany({
     where,
-    include: { languages: true },
+    include: {
+      languages: true,
+      notes: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
     orderBy: { createdAt: "desc" },
     take: 5000,
   });
@@ -48,6 +51,7 @@ export async function GET(request: NextRequest) {
     { header: "Maaş Beklentisi", key: "salaryExpectation", width: 18 },
     { header: "Para Birimi", key: "salaryCurrency", width: 12 },
     { header: "Diller", key: "languages", width: 30 },
+    { header: "Notlar", key: "latestNote", width: 40 },
     { header: "Kayıt Tarihi", key: "createdAt", width: 20 },
   ];
 
@@ -64,6 +68,7 @@ export async function GET(request: NextRequest) {
     salaryExpectation: c.salaryExpectation ? Number(c.salaryExpectation) : "",
     salaryCurrency: c.salaryCurrency || "",
     languages: c.languages.map((l) => `${l.language} (${l.level})`).join(", "),
+    latestNote: c.notes[0]?.content || "",
     createdAt: c.createdAt.toLocaleDateString("tr-TR"),
   }));
 

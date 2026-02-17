@@ -42,7 +42,7 @@ const mainNav = [
     ),
   },
   {
-    name: "Süreçler",
+    name: "S\u00fcre\u00e7ler",
     href: "/processes",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -92,14 +92,18 @@ const toolsNav = [
   },
 ];
 
-export function Sidebar() {
+/**
+ * SidebarContent renders just the navigation links.
+ * Used by both the desktop sidebar and the mobile drawer.
+ */
+export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-slate-900">
+    <>
       {/* Logo */}
       <div className="flex h-16 items-center px-6">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+        <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onNavClick}>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600">
             <span className="text-sm font-bold text-white">T</span>
           </div>
@@ -113,7 +117,7 @@ export function Sidebar() {
       <nav className="sidebar-scroll flex-1 overflow-y-auto px-3 py-4">
         <div className="mb-2 px-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Ana Menü
+            {"Ana Men\u00fc"}
           </p>
         </div>
         <ul className="space-y-0.5">
@@ -124,6 +128,7 @@ export function Sidebar() {
               <li key={item.name}>
                 <Link
                   href={item.href}
+                  onClick={onNavClick}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
@@ -143,7 +148,7 @@ export function Sidebar() {
 
         <div className="mb-2 px-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            Araçlar
+            {"Ara\u00e7lar"}
           </p>
         </div>
         <ul className="space-y-0.5">
@@ -154,6 +159,7 @@ export function Sidebar() {
               <li key={item.name}>
                 <Link
                   href={item.href}
+                  onClick={onNavClick}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
@@ -173,6 +179,17 @@ export function Sidebar() {
       <div className="border-t border-slate-800 px-4 py-3">
         <p className="text-[11px] text-slate-600">v1.0.0 — MVP</p>
       </div>
+    </>
+  );
+}
+
+/**
+ * Desktop sidebar — hidden on mobile, visible on md+.
+ */
+export function Sidebar() {
+  return (
+    <aside className="hidden h-screen w-64 flex-col bg-slate-900 md:flex">
+      <SidebarContent />
     </aside>
   );
 }

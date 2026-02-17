@@ -1,19 +1,77 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 
 type LanguageEntry = { language: string; level: string };
 
-export default function NewCandidatePage() {
+type Candidate = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  linkedinUrl: string | null;
+  educationLevel: string | null;
+  universityName: string | null;
+  universityDepartment: string | null;
+  totalExperienceYears: number | null;
+  currentSector: string | null;
+  currentTitle: string | null;
+  salaryExpectation: number | null;
+  salaryCurrency: string | null;
+  salaryType: string | null;
+  country: string | null;
+  city: string | null;
+  isRemoteEligible: boolean;
+  isHybridEligible: boolean;
+  status: string;
+  languages: { id: string; language: string; level: string }[];
+};
+
+export default function EditCandidatePage() {
   const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+
+  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [languages, setLanguages] = useState<LanguageEntry[]>([]);
+
+  useEffect(() => {
+    async function fetchCandidate() {
+      try {
+        const res = await fetch(`/api/candidates/${id}`);
+        const data = await res.json();
+        if (!data.success) {
+          setError(data.error?.message || "Aday bilgileri yüklenemedi");
+          return;
+        }
+        setCandidate(data.data);
+        if (data.data.languages && data.data.languages.length > 0) {
+          setLanguages(
+            data.data.languages.map((l: { language: string; level: string }) => ({
+              language: l.language,
+              level: l.level,
+            }))
+          );
+        }
+      } catch {
+        setError("Aday bilgileri yüklenirken bir hata oluştu");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCandidate();
+  }, [id]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setSaving(true);
 
     const formData = new FormData(e.currentTarget);
@@ -46,33 +104,8 @@ export default function NewCandidatePage() {
     }
 
     try {
-      // Duplicate check first
-      const dupRes = await fetch("/api/candidates/duplicate-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: body.email,
-          phone: body.phone,
-          linkedinUrl: body.linkedinUrl,
-          firstName: body.firstName,
-          lastName: body.lastName,
-        }),
-      });
-      const dupData = await dupRes.json();
-      if (dupData.success && dupData.data.hasDuplicates) {
-        const names = dupData.data.matches
-          .map((m: { firstName: string; lastName: string; matchType: string }) =>
-            `${m.firstName} ${m.lastName} (${m.matchType})`
-          )
-          .join(", ");
-        if (!confirm(`Olası tekrar kayıt bulundu: ${names}\n\nYine de kaydetmek istiyor musunuz?`)) {
-          setSaving(false);
-          return;
-        }
-      }
-
-      const res = await fetch("/api/candidates", {
-        method: "POST",
+      const res = await fetch(`/api/candidates/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
@@ -81,7 +114,12 @@ export default function NewCandidatePage() {
         setError(data.error?.message || "Bir hata oluştu");
         return;
       }
-      router.push(`/candidates/${data.data.id}`);
+      setSuccess("Aday bilgileri başarıyla güncellendi");
+      setTimeout(() => {
+        router.push(`/candidates/${id}`);
+      }, 1000);
+    } catch {
+      setError("Güncelleme sırasında bir hata oluştu");
     } finally {
       setSaving(false);
     }
@@ -98,15 +136,46 @@ export default function NewCandidatePage() {
   const inputClass =
     "mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+          <p className="mt-3 text-sm text-slate-500">Aday bilgileri yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!candidate) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-rose-600">{error || "Aday bulunamadı"}</p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            Geri Dön
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Yeni Aday</h1>
-        <p className="mt-1 text-sm text-slate-500">Aday havuzuna yeni bir kayıt ekleyin</p>
+        <h1 className="text-2xl font-bold text-slate-900">Aday Düzenle</h1>
+        <p className="mt-1 text-sm text-slate-500">Aday bilgilerini güncelleyin</p>
       </div>
 
       {error && (
         <div className="mb-6 rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>
+      )}
+
+      {success && (
+        <div className="mb-6 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-600">{success}</div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -123,23 +192,23 @@ export default function NewCandidatePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-700">Ad *</label>
-              <input name="firstName" type="text" required className={inputClass} />
+              <input name="firstName" type="text" required defaultValue={candidate.firstName} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Soyad *</label>
-              <input name="lastName" type="text" required className={inputClass} />
+              <input name="lastName" type="text" required defaultValue={candidate.lastName} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">E-posta</label>
-              <input name="email" type="email" className={inputClass} />
+              <input name="email" type="email" defaultValue={candidate.email ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Telefon</label>
-              <input name="phone" type="text" className={inputClass} />
+              <input name="phone" type="text" defaultValue={candidate.phone ?? ""} className={inputClass} />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700">LinkedIn URL</label>
-              <input name="linkedinUrl" type="url" className={inputClass} />
+              <input name="linkedinUrl" type="url" defaultValue={candidate.linkedinUrl ?? ""} className={inputClass} />
             </div>
           </div>
         </div>
@@ -157,19 +226,19 @@ export default function NewCandidatePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-700">Mevcut Pozisyon</label>
-              <input name="currentTitle" type="text" className={inputClass} />
+              <input name="currentTitle" type="text" defaultValue={candidate.currentTitle ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Sektör</label>
-              <input name="currentSector" type="text" className={inputClass} />
+              <input name="currentSector" type="text" defaultValue={candidate.currentSector ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Toplam Deneyim (Yıl)</label>
-              <input name="totalExperienceYears" type="number" min="0" max="50" className={inputClass} />
+              <input name="totalExperienceYears" type="number" min="0" max="50" defaultValue={candidate.totalExperienceYears ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Eğitim Seviyesi</label>
-              <select name="educationLevel" className={inputClass}>
+              <select name="educationLevel" defaultValue={candidate.educationLevel ?? ""} className={inputClass}>
                 <option value="">Seçiniz</option>
                 <option value="Lise">Lise</option>
                 <option value="MYO">MYO</option>
@@ -180,11 +249,11 @@ export default function NewCandidatePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Üniversite</label>
-              <input name="universityName" type="text" className={inputClass} />
+              <input name="universityName" type="text" defaultValue={candidate.universityName ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Bölüm</label>
-              <input name="universityDepartment" type="text" className={inputClass} />
+              <input name="universityDepartment" type="text" defaultValue={candidate.universityDepartment ?? ""} className={inputClass} />
             </div>
           </div>
         </div>
@@ -203,11 +272,11 @@ export default function NewCandidatePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-slate-700">Maaş Beklentisi</label>
-              <input name="salaryExpectation" type="number" min="0" className={inputClass} />
+              <input name="salaryExpectation" type="number" min="0" defaultValue={candidate.salaryExpectation ?? ""} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Para Birimi</label>
-              <select name="salaryCurrency" defaultValue="TRY" className={inputClass}>
+              <select name="salaryCurrency" defaultValue={candidate.salaryCurrency ?? "TRY"} className={inputClass}>
                 <option value="TRY">TRY</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
@@ -215,7 +284,7 @@ export default function NewCandidatePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Maaş Tipi</label>
-              <select name="salaryType" className={inputClass}>
+              <select name="salaryType" defaultValue={candidate.salaryType ?? ""} className={inputClass}>
                 <option value="">Seçiniz</option>
                 <option value="net">Net</option>
                 <option value="gross">Brüt</option>
@@ -223,19 +292,19 @@ export default function NewCandidatePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Ülke</label>
-              <input name="country" type="text" defaultValue="Türkiye" className={inputClass} />
+              <input name="country" type="text" defaultValue={candidate.country ?? "Türkiye"} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Şehir</label>
-              <input name="city" type="text" className={inputClass} />
+              <input name="city" type="text" defaultValue={candidate.city ?? ""} className={inputClass} />
             </div>
             <div className="flex items-end gap-6">
               <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input name="isRemoteEligible" type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                <input name="isRemoteEligible" type="checkbox" defaultChecked={candidate.isRemoteEligible} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                 Uzaktan
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input name="isHybridEligible" type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                <input name="isHybridEligible" type="checkbox" defaultChecked={candidate.isHybridEligible} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
                 Hibrit
               </label>
             </div>
@@ -316,11 +385,11 @@ export default function NewCandidatePage() {
             disabled={saving}
             className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50"
           >
-            {saving ? "Kaydediliyor..." : "Kaydet"}
+            {saving ? "Güncelleniyor..." : "Güncelle"}
           </button>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push(`/candidates/${id}`)}
             className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
             İptal

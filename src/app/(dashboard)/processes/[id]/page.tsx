@@ -133,6 +133,28 @@ export default function ProcessDetailPage() {
   const [emailLogsLoading, setEmailLogsLoading] = useState(false);
   const [expandedEmailId, setExpandedEmailId] = useState<string | null>(null);
 
+  // Interview edit
+  const [editingInterview, setEditingInterview] = useState<InterviewItem | null>(null);
+  const [editInterviewForm, setEditInterviewForm] = useState({
+    scheduledAt: "", type: "online", durationMinutes: "60",
+    meetingLink: "", location: "", clientParticipants: "", notes: "",
+  });
+  const [updatingInterview, setUpdatingInterview] = useState(false);
+
+  // Interview complete
+  const [completingInterviewId, setCompletingInterviewId] = useState<string | null>(null);
+  const [completeResultNotes, setCompleteResultNotes] = useState("");
+  const [completingInterview, setCompletingInterview] = useState(false);
+
+  // Interview delete
+  const [deletingInterviewId, setDeletingInterviewId] = useState<string | null>(null);
+
+  // Interview error
+  const [interviewError, setInterviewError] = useState("");
+
+  // Fitness score
+  const [updatingScore, setUpdatingScore] = useState(false);
+
   const fetchProcess = useCallback(async () => {
     const res = await fetch(`/api/processes/${id}`);
     const data = await res.json();
@@ -190,6 +212,7 @@ export default function ProcessDetailPage() {
   async function handleAddInterview(e: React.FormEvent) {
     e.preventDefault();
     setSavingInterview(true);
+    setInterviewError("");
     const res = await fetch(`/api/processes/${id}/interviews`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -207,9 +230,96 @@ export default function ProcessDetailPage() {
     if (data.success) {
       setShowInterviewForm(false);
       setInterviewForm({ scheduledAt: "", type: "online", durationMinutes: "60", meetingLink: "", location: "", clientParticipants: "", notes: "" });
+      setInterviewError("");
       fetchProcess();
+    } else {
+      setInterviewError(data.error?.message || "Mülakat oluşturulamadı");
     }
     setSavingInterview(false);
+  }
+
+  function handleEditInterview(interview: InterviewItem) {
+    setEditingInterview(interview);
+    setEditInterviewForm({
+      scheduledAt: new Date(interview.scheduledAt).toISOString().slice(0, 16),
+      type: interview.type,
+      durationMinutes: String(interview.durationMinutes),
+      meetingLink: interview.meetingLink || "",
+      location: interview.location || "",
+      clientParticipants: interview.clientParticipants || "",
+      notes: interview.notes || "",
+    });
+  }
+
+  async function handleUpdateInterview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingInterview) return;
+    setUpdatingInterview(true);
+    const res = await fetch(`/api/processes/${id}/interviews/${editingInterview.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scheduledAt: editInterviewForm.scheduledAt,
+        type: editInterviewForm.type,
+        durationMinutes: Number(editInterviewForm.durationMinutes),
+        meetingLink: editInterviewForm.meetingLink || undefined,
+        location: editInterviewForm.location || undefined,
+        clientParticipants: editInterviewForm.clientParticipants || undefined,
+        notes: editInterviewForm.notes || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setEditingInterview(null);
+      fetchProcess();
+    }
+    setUpdatingInterview(false);
+  }
+
+  async function handleCompleteInterview(interviewId: string) {
+    setCompletingInterview(true);
+    const res = await fetch(`/api/processes/${id}/interviews/${interviewId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        isCompleted: true,
+        resultNotes: completeResultNotes || undefined,
+      }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      setCompletingInterviewId(null);
+      setCompleteResultNotes("");
+      fetchProcess();
+    }
+    setCompletingInterview(false);
+  }
+
+  async function handleDeleteInterview(interviewId: string) {
+    if (!window.confirm("Bu mülakatı silmek istediğinizden emin misiniz?")) return;
+    setDeletingInterviewId(interviewId);
+    const res = await fetch(`/api/processes/${id}/interviews/${interviewId}`, {
+      method: "DELETE",
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchProcess();
+    }
+    setDeletingInterviewId(null);
+  }
+
+  async function handleFitnessScoreUpdate(score: number) {
+    setUpdatingScore(true);
+    const res = await fetch(`/api/processes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fitnessScore: score }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      fetchProcess();
+    }
+    setUpdatingScore(false);
   }
 
   async function openEmailPanel() {
@@ -288,19 +398,6 @@ export default function ProcessDetailPage() {
     if (activeTab === "emails") fetchEmailLogs();
   }, [activeTab, fetchEmailLogs]);
 
-  function renderStars(score: number | null) {
-    if (!score) return <span className="text-slate-300">—</span>;
-    return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <svg key={i} className={`h-4 w-4 ${i <= score ? "text-amber-400" : "text-slate-200"}`} fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -356,7 +453,22 @@ export default function ProcessDetailPage() {
             <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold ${STAGE_COLORS[process.stage] || "bg-slate-100 text-slate-700"}`}>
               {PIPELINE_STAGE_LABELS[process.stage] || process.stage}
             </span>
-            {renderStars(process.fitnessScore)}
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={updatingScore}
+                  onClick={() => handleFitnessScoreUpdate(i)}
+                  className="transition-colors hover:scale-110 disabled:opacity-50"
+                  title={`${i} puan ver`}
+                >
+                  <svg className={`h-4 w-4 ${process.fitnessScore && i <= process.fitnessScore ? "text-amber-400" : "text-slate-200 hover:text-amber-300"}`} fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </button>
+              ))}
+            </div>
             {isClosed && (
               <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
                 Kapatıldı
@@ -724,6 +836,11 @@ export default function ProcessDetailPage() {
                 ) : (
                   <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                     <h3 className="mb-4 text-sm font-semibold text-slate-900">Yeni Mülakat</h3>
+                    {interviewError && (
+                      <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm font-medium text-rose-700">
+                        {interviewError}
+                      </div>
+                    )}
                     <form onSubmit={handleAddInterview} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="block text-sm font-medium text-slate-700">Tarih ve Saat</label>
@@ -856,11 +973,38 @@ export default function ProcessDetailPage() {
                         </span>
                         <span className="text-xs text-slate-500">{interview.durationMinutes} dk</span>
                       </div>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        interview.isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-indigo-50 text-indigo-700"
-                      }`}>
-                        {interview.isCompleted ? "Tamamlandı" : "Planlandı"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          interview.isCompleted ? "bg-emerald-50 text-emerald-700" : "bg-indigo-50 text-indigo-700"
+                        }`}>
+                          {interview.isCompleted ? "Tamamlandı" : "Planlandı"}
+                        </span>
+                        {!isClosed && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleEditInterview(interview)}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-indigo-600"
+                            >
+                              Düzenle
+                            </button>
+                            {!interview.isCompleted && (
+                              <button
+                                onClick={() => { setCompletingInterviewId(interview.id); setCompleteResultNotes(""); }}
+                                className="rounded-lg border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-50"
+                              >
+                                Tamamla
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteInterview(interview.id)}
+                              disabled={deletingInterviewId === interview.id}
+                              className="rounded-lg border border-rose-200 px-2 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                            >
+                              {deletingInterviewId === interview.id ? "..." : "Sil"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {interview.meetingLink && (
                       <p className="mt-2 text-sm text-blue-600">
@@ -882,6 +1026,137 @@ export default function ProcessDetailPage() {
                       <div className="mt-3 rounded-lg bg-slate-50 p-3">
                         <p className="text-xs font-semibold text-slate-500">Sonuç</p>
                         <p className="mt-1 text-sm text-slate-700">{interview.resultNotes}</p>
+                      </div>
+                    )}
+
+                    {/* Complete Interview Inline Form */}
+                    {completingInterviewId === interview.id && (
+                      <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
+                        <h4 className="text-sm font-semibold text-slate-900">Mülakatı Tamamla</h4>
+                        <textarea
+                          value={completeResultNotes}
+                          onChange={(e) => setCompleteResultNotes(e.target.value)}
+                          placeholder="Sonuç notu (isteğe bağlı)..."
+                          rows={2}
+                          className={inputClass}
+                        />
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            onClick={() => handleCompleteInterview(interview.id)}
+                            disabled={completingInterview}
+                            className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {completingInterview ? "Kaydediliyor..." : "Onayla"}
+                          </button>
+                          <button
+                            onClick={() => { setCompletingInterviewId(null); setCompleteResultNotes(""); }}
+                            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            İptal
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Edit Interview Inline Form */}
+                    {editingInterview?.id === interview.id && (
+                      <div className="mt-4 rounded-lg border border-indigo-200 bg-indigo-50/30 p-4">
+                        <h4 className="mb-3 text-sm font-semibold text-slate-900">Mülakatı Düzenle</h4>
+                        <form onSubmit={handleUpdateInterview} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700">Tarih ve Saat</label>
+                            <input
+                              type="datetime-local"
+                              value={editInterviewForm.scheduledAt}
+                              onChange={(e) => setEditInterviewForm({ ...editInterviewForm, scheduledAt: e.target.value })}
+                              required
+                              className={inputClass}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700">Tür</label>
+                            <select
+                              value={editInterviewForm.type}
+                              onChange={(e) => setEditInterviewForm({ ...editInterviewForm, type: e.target.value })}
+                              className={inputClass}
+                            >
+                              <option value="online">Online</option>
+                              <option value="face_to_face">Yüz Yüze</option>
+                              <option value="phone">Telefon</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700">Süre (dakika)</label>
+                            <input
+                              type="number"
+                              value={editInterviewForm.durationMinutes}
+                              onChange={(e) => setEditInterviewForm({ ...editInterviewForm, durationMinutes: e.target.value })}
+                              min={15}
+                              max={480}
+                              className={inputClass}
+                            />
+                          </div>
+                          {editInterviewForm.type === "online" && (
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700">Toplantı Linki</label>
+                              <input
+                                type="url"
+                                value={editInterviewForm.meetingLink}
+                                onChange={(e) => setEditInterviewForm({ ...editInterviewForm, meetingLink: e.target.value })}
+                                placeholder="https://..."
+                                className={inputClass}
+                              />
+                            </div>
+                          )}
+                          {editInterviewForm.type === "face_to_face" && (
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700">Konum</label>
+                              <input
+                                type="text"
+                                value={editInterviewForm.location}
+                                onChange={(e) => setEditInterviewForm({ ...editInterviewForm, location: e.target.value })}
+                                placeholder="Adres..."
+                                className={inputClass}
+                              />
+                            </div>
+                          )}
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700">Katılımcılar</label>
+                            <input
+                              type="text"
+                              value={editInterviewForm.clientParticipants}
+                              onChange={(e) => setEditInterviewForm({ ...editInterviewForm, clientParticipants: e.target.value })}
+                              placeholder="Müşteri tarafı katılımcılar..."
+                              className={inputClass}
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-slate-700">Notlar</label>
+                            <textarea
+                              value={editInterviewForm.notes}
+                              onChange={(e) => setEditInterviewForm({ ...editInterviewForm, notes: e.target.value })}
+                              rows={2}
+                              placeholder="Mülakat ile ilgili notlar..."
+                              className={inputClass}
+                            />
+                          </div>
+                          <div className="flex items-center gap-3 sm:col-span-2">
+                            <button
+                              type="submit"
+                              disabled={updatingInterview}
+                              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                              {updatingInterview ? "Güncelleniyor..." : "Güncelle"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingInterview(null)}
+                              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                            >
+                              İptal
+                            </button>
+                          </div>
+                        </form>
                       </div>
                     )}
                   </div>
