@@ -1,7 +1,27 @@
 # 🤖 AI_RULES.md — Read This Every Session
 
-> **This file must be read at the start of EVERY session, no exceptions.**
+> **This file must be read IN FULL at the start of EVERY session, no exceptions.**
 > It contains the rules, standards, and behaviors that apply at all times.
+> 
+> **MID-SESSION RULE CHECK:** After the initial full read, you do NOT re-read the entire file.
+> Instead, at the trigger points below, run a quick self-check and confirm compliance:
+> 
+> **Triggers:**
+> - Before starting a new feature (Phase 6.1)
+> - Before writing authentication, payment, or security-critical code
+> - Before running the quality gate (Phase 6.3)
+> 
+> **Self-check at each trigger:**
+> ```
+> 📋 Rule check before [action]:
+> ✅ Security: parameterized queries, no hardcoded secrets, auth on every endpoint
+> ✅ Edge cases: null/empty, boundaries, concurrent access considered
+> ✅ Race conditions: write ops analyzed, idempotency/locking planned
+> ✅ Testing: regression tests, test summary, UI test instructions planned
+> ✅ Communication: deliverable + approval before moving on
+> ```
+> 
+> If the user sends this file again mid-session → re-read fully and confirm: *"Rules refreshed. ✅"*
 
 ---
 
@@ -92,7 +112,36 @@ These rules apply to **every single line of code** you produce, in every phase, 
 - **Never hallucinate** libraries, functions, or APIs. If unsure, say so.
 - **Never assume.** Ask when requirements are unclear.
 - Handle **all error scenarios**: null/undefined, empty arrays, network errors, timeouts, unauthorized access.
-- Think about **edge cases**: empty strings, extremely large inputs, concurrent access, Unicode characters.
+
+### Edge Case Awareness (Non-Negotiable)
+For EVERY function, endpoint, or component, systematically consider these 4 categories before writing code:
+- **Input:** null/undefined, empty, extreme lengths, special characters, boundary values, date/timezone, file edge cases
+- **State:** empty DB (first use), concurrent modification, session expiry mid-operation, partial failures, soft-deleted records
+- **Network:** timeout mid-write, duplicate requests, DB connection loss, 3rd party API failures, interrupted uploads
+- **Business Logic:** permission boundaries, circular references, division by zero, currency rounding (integer cents), pagination edges, bulk operations on 0/1/max items
+
+> The full edge case catalog with detailed examples is in `AI_METHODOLOGY.md` (Phase 6 — Edge Case Reference). Consult it when analyzing a new feature.
+
+**Before writing any feature, briefly list the relevant edge cases and confirm you've handled them.**
+
+### Race Condition & Concurrency (Non-Negotiable)
+Apply these rules to EVERY write operation:
+
+**🚩 Red Flag Patterns — ALWAYS warn when you see:**
+- Read-Modify-Write without lock/transaction
+- Check-Then-Act without DB-level constraint (`if (!exists) create()`)
+- Non-atomic counters (`count = get(); set(count+1)`)
+- Double-spend / Double-booking scenarios
+
+**Mandatory rules:**
+- **Never rely on application-level checks alone** — enforce uniqueness and constraints at the database level.
+- **Every write endpoint** must be analyzed for: "What if two identical requests arrive within 10ms?"
+- **All payment/financial operations** MUST use idempotency keys + database transactions. No exceptions.
+- **Counters** MUST use atomic DB operations (`SET x = x + 1`), never read-then-write.
+- Optimistic lock conflicts → return 409 Conflict, not 500.
+- Token refresh must handle concurrent requests safely.
+
+> The full solution strategies table (optimistic lock, pessimistic lock, idempotency keys, queues, distributed locks, etc.) is in `AI_METHODOLOGY.md` (Phase 6 — Concurrency Reference). Consult it when designing write operations.
 
 ### Clean Code
 - Follow **DRY** (Don't Repeat Yourself) and **SOLID** principles.
@@ -107,6 +156,8 @@ These rules apply to **every single line of code** you produce, in every phase, 
 - Tests must cover **real scenarios** — no trivial tests that always pass.
 - Test both **success and failure** paths.
 - Always write tests for **security-related functions** (auth, validation, etc.).
+- **After writing tests, always provide a summary** listing: number of unit tests, number of integration tests, what they cover, and any gaps.
+- **After each feature, provide step-by-step UI testing instructions** for the user to manually verify the feature in their browser/app.
 
 ### Architecture
 - Use **transactions** for database operations involving multiple writes.
@@ -128,6 +179,12 @@ At the start of every session, provide a status summary:
 
 ### During Development
 - After completing each phase or feature, present the deliverable and **ask for approval** before moving on.
+- **Phase Transition Rule:** When a phase is complete, always preview the next phase before asking for approval:
+  ```
+  ✅ Phase [X] complete. Deliverable: [document name]
+  ➡️ Next: Phase [Y] — [Phase Name]: [1-2 sentence summary]
+  Shall we proceed?
+  ```
 - If you spot a risk or a better approach, **speak up immediately**.
 - If a request conflicts with the rules in this file, **warn me and explain why**.
 - Do not overwhelm with questions — ask **one group at a time**.
@@ -140,57 +197,20 @@ At the start of every session, provide a status summary:
 
 ## 🔄 QUICK COMMANDS
 
-### Start New Project
-```
-Please read AI_RULES.md. I want to start a new project.
-```
-(The AI will then ask you for AI_METHODOLOGY.md as directed by the routing table above.)
+> Quick commands are documented in `AI_METHODOLOGY.md` (Appendix — Quick Commands).
+> The user will simply send the command — you will recognize and execute it based on the rules in this file.
 
-### Resume Project
-```
-Please read AI_RULES.md. We are in Phase [X].
-Here are our project documents: [attach deliverables]
-Let's continue.
-```
-(If the AI needs AI_METHODOLOGY.md for the current phase, it will ask you.)
-
-### Mid-Session Security & Quality Check
-```
-Check the code you just wrote:
-1. SQL injection, XSS, or IDOR vulnerabilities?
-2. All user inputs validated?
-3. Any hard-coded secrets?
-4. Error messages leaking system info?
-5. Any hallucinated packages or APIs?
-6. Edge cases handled?
-7. Is this production-ready?
-```
-
-### Pre-Deployment Check
-```
-Pre-deployment review:
-1. All .env variables set for production?
-2. Debug modes disabled?
-3. CORS properly restricted?
-4. Rate limiting active?
-5. Logs going to file/service (not console)?
-6. Migrations ready and tested?
-7. Security headers configured?
-8. HTTPS enforced?
-9. Unused endpoints removed?
-10. Dependency vulnerabilities resolved?
-```
-
-### New Feature (Post-Release)
-```
-New feature request. Follow the Phase 6 process from AI_METHODOLOGY.md.
-Feature: [description]
-```
-
-### Bug Fix
-```
-Bug: [short description]
-Expected: ...
-Actual: ...
-Error: [paste error if any]
-```
+**Bug Fix Protocol (always applies):**
+After every bug fix, you MUST:
+1. **Write a regression test** that reproduces the exact bug scenario — must FAIL before fix, PASS after.
+2. **Run the full test suite** to ensure no side effects.
+3. **Present a summary:**
+   ```
+   🐛 Bug Fix Summary:
+   - Root cause: [what caused the bug]
+   - Fix: [what was changed]
+   - Regression test added: [test name and what it verifies]
+   - Full test suite: [X passed, Y failed]
+   - Side effects: [any other areas potentially affected]
+   ```
+4. If the bug was caused by a missing edge case or race condition, update the relevant analysis.

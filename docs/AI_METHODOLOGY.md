@@ -143,12 +143,20 @@ Present for approval before moving to Phase 1B.
 - For each page: what is its purpose? What are the key elements on it?
 - Are there any modals, drawers, or overlays?
 
-### 1B.5 — Notifications & Communication
+### 1B.5 — UI / Design Input
+- Do you have any design references, mockups, wireframes, or screenshots for the UI?
+- Is there a brand style guide (colors, fonts, logo)?
+- Are there specific design systems or UI libraries you want to use? (e.g., Material UI, Tailwind, Shadcn, Ant Design)
+- Any competitor UIs you like or dislike? What specifically?
+- If the user provides mockups or references, analyze them and use as the design foundation for all UI work.
+- If no design input is provided, propose a clean, modern UI direction and get approval before proceeding.
+
+### 1B.6 — Notifications & Communication
 - Will users receive notifications? (email, push, in-app, SMS)
 - What events trigger notifications? (e.g., new message, order update, password reset)
 - Are there any transactional emails? (welcome, receipt, password reset)
 
-### 1B.6 — Platform & Accessibility
+### 1B.7 — Platform & Accessibility
 - Mobile, web, desktop, or all? Responsive web or separate mobile app?
 - Multi-language support needed? Which languages?
 - Accessibility requirements? (WCAG level, screen reader support)
@@ -376,7 +384,14 @@ This document consolidates all decisions from Phase 1A, 1B, and 1C. Present for 
 
 ### 2.1 — Architecture Pattern
 - Recommend an architecture pattern (monolith, microservices, serverless, modular monolith) based on Phase 1A–1C requirements.
-- Explain the trade-offs and get user confirmation.
+- **Present at least 2 viable options** with a comparison table:
+  - Pros and cons of each approach
+  - Scalability implications (what happens at 10x, 100x users?)
+  - Performance characteristics
+  - Development speed vs long-term maintainability
+  - Cost implications
+- Get explicit user confirmation before proceeding.
+- If the user is unsure, make a clear recommendation with justification.
 
 ### 2.2 — Folder Structure
 - Propose a complete folder/directory structure.
@@ -482,6 +497,16 @@ project-root/
 - Define initial seed data.
 - Plan migration strategy (tool, naming convention, rollback).
 
+### 3.6 — Concurrency & Locking Strategy
+For every table that can receive concurrent writes, define the protection strategy:
+- Which tables need **optimistic locking** (version/timestamp column)?
+- Which tables need **pessimistic locking** (SELECT FOR UPDATE) for critical operations?
+- Which columns need **unique constraints** to prevent duplicate creation at DB level?
+- Which counters/accumulators should use **atomic operations** (`SET count = count + 1`)?
+- What **transaction isolation level** is needed? (READ COMMITTED is default; SERIALIZABLE for financial ops)
+- Are there **multi-table writes** that must be wrapped in a single transaction?
+- Document these decisions in DATABASE_SCHEMA.md under a "Concurrency Strategy" section.
+
 ### ✅ Phase 3 Deliverable: `DATABASE_SCHEMA.md`
 
 <template id="DATABASE_SCHEMA">
@@ -524,6 +549,14 @@ project-root/
 
 ## 7. Migration Strategy
 [Tool, naming convention, rollback approach]
+
+## 8. Concurrency Strategy
+| Table | Risk Scenario | Protection | Implementation |
+|-------|--------------|------------|----------------|
+| users | Duplicate registration | Unique constraint on email | DB-level UNIQUE index |
+| orders | Double payment | Idempotency key + transaction | idempotency_key UNIQUE column |
+| products | Overselling (stock < 0) | Atomic decrement + check | UPDATE SET stock = stock - 1 WHERE stock >= 1 |
+| [table] | [scenario] | [strategy] | [implementation] |
 ```
 </template>
 
@@ -548,6 +581,37 @@ For each endpoint: request format, response format, status codes, auth requireme
 
 ### 4.4 — Validation Rules
 - Define validation rules for every input field.
+
+### 4.5 — Edge Case Scenarios per Endpoint
+For each endpoint, identify and document edge case scenarios:
+- What happens if required fields are missing or null?
+- What happens if input values are at boundary limits (min, max, 0, negative)?
+- What happens if the referenced resource doesn't exist (404) or was soft-deleted?
+- What happens if the user doesn't own the resource (403 vs 404)?
+- What happens if the request is a duplicate (idempotency)?
+- What happens under concurrent access (two users modifying the same resource)?
+- Document these in the API_DOCS.md under each endpoint as an "Edge Cases" section.
+
+### 4.6 — Concurrency Design per Endpoint
+For every write endpoint (POST/PUT/PATCH/DELETE), answer:
+- **Duplicate safety:** Is this endpoint idempotent? If not, does it require an idempotency key header?
+- **Concurrent mutation:** What happens if two users update the same resource simultaneously? (use optimistic locking with version/ETag, or last-write-wins with conflict notification?)
+- **Race-prone operations:** Does this endpoint involve check-then-act logic? (e.g., "check stock, then reserve") If so, what database-level protection is used?
+- **Common race condition scenarios to evaluate:**
+  - Payment/checkout: double-charge prevention
+  - Inventory/booking: overselling/overbooking prevention
+  - Like/vote/rating: accurate counter with concurrent votes
+  - User registration: duplicate account prevention
+  - Token refresh: concurrent refresh handling
+  - File upload: same file uploaded twice simultaneously
+  - Coupon/promo code: single-use code used by two users simultaneously
+- Add a `Concurrency` section to each write endpoint in API_DOCS.md:
+  ```
+  **Concurrency:**
+  - Idempotent: Yes/No (Idempotency-Key header required)
+  - Conflict strategy: Optimistic lock (version header) / Last-write-wins / Queue
+  - Race protection: [specific DB-level mechanism]
+  ```
 
 ### ✅ Phase 4 Deliverable: `API_DOCS.md`
 
@@ -587,6 +651,15 @@ Bearer token: `Authorization: Bearer <token>`
 | 409 | EMAIL_EXISTS | Email taken |
 | 429 | RATE_LIMITED | Too many requests |
 
+**Edge Cases:**
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Duplicate registration (same email) | Return 409, do not create duplicate |
+| Empty password | Return 400 with specific validation message |
+| Very long email (>255 chars) | Return 400, enforce max length |
+| SQL/XSS in email field | Sanitized, no injection |
+| Concurrent registration (same email, parallel) | First succeeds, second gets 409 |
+
 [Continue for all endpoints...]
 
 ## Error Code Reference
@@ -608,7 +681,17 @@ Bearer token: `Authorization: Bearer <token>`
 
 # PHASE 5: PROJECT SETUP
 
-**Goal:** Initialize a clean, well-configured project scaffold.
+**Goal:** Initialize a clean, well-configured project scaffold with version control and hosting.
+
+### 5.0 — Git Repository & Hosting
+- Ask the user: *"Do you have a Git repository ready? If not, I'll guide you through creating one."*
+- Initialize Git with a proper `.gitignore` and initial commit.
+- Set up branching strategy from Phase 2 (create main + develop branches if applicable).
+- **Hosting:** Default recommendation is **Vercel** for frontend/fullstack projects. If the project requirements suggest a different host (e.g., backend-only API → Railway/Render, heavy compute → AWS/GCP), recommend alternatives with justification and get confirmation.
+- Configure deployment pipeline connected to the Git repo.
+- **Git discipline:** After each completed phase or feature, prompt the user to commit and push. Provide the exact commit message. Format: `[phase/feature]: description`
+  - Example: `[phase-5]: project scaffold with base infrastructure`
+  - Example: `[feature]: user authentication with JWT`
 
 ### 5.1 — Project Initialization
 - Initialize with chosen framework/tools.
@@ -648,6 +731,102 @@ Bearer token: `Authorization: Bearer <token>`
 
 **6.1 — Plan:** Confirm scope, endpoints, dependencies, DB changes.
 
+**6.1.1 — Edge Case Analysis (before writing code):**
+Before implementing any feature, present an edge case analysis to the user:
+```
+🔍 Edge Case Analysis for [Feature Name]:
+
+Input edge cases:
+- [list relevant input edge cases for this feature]
+
+State edge cases:
+- [list relevant state edge cases]
+
+Business logic edge cases:
+- [list relevant business logic edge cases]
+
+Mitigation approach:
+- [how each will be handled in the implementation]
+```
+Get user confirmation before proceeding to implementation.
+
+**📚 Edge Case Reference Catalog (consult when analyzing features):**
+
+**Input Edge Cases:**
+- Null / undefined / missing fields
+- Empty strings, empty arrays, empty objects
+- Extremely long strings (10K+ characters)
+- Special characters: `<script>`, SQL fragments, Unicode, emoji, RTL text, zero-width characters
+- Negative numbers, zero, MAX_INT, floating point precision (0.1 + 0.2 ≠ 0.3)
+- Dates: leap years, timezone differences, UTC vs local, epoch 0, far future dates, DST transitions
+- Files: 0 bytes, max size boundary, wrong MIME type, corrupted content, path traversal names
+
+**State Edge Cases:**
+- First-time use (no data exists yet — empty states)
+- Only 1 record vs millions of records (pagination, performance)
+- Concurrent modifications (two users editing same resource simultaneously)
+- Race conditions in async operations (double submit, parallel requests)
+- Stale data / cache invalidation after updates
+- Session or token expiry during a multi-step operation
+- Partial failures in multi-step operations (step 2 of 3 fails — what happens to step 1?)
+- Soft-deleted records appearing in queries
+
+**Network / Infrastructure Edge Cases:**
+- Timeout mid-operation (what happens to partially written data?)
+- Duplicate requests (user clicks submit twice rapidly — use idempotency keys)
+- Database connection loss during a transaction (auto-rollback?)
+- Third-party API down, slow, or returning unexpected format
+- Webhook delivery failure and retry handling
+- File upload interrupted halfway
+
+**Business Logic Edge Cases:**
+- Permission boundaries (admin demotes themselves, last admin deleted)
+- Circular references in data relationships
+- Division by zero in calculations
+- Currency/financial rounding (use integer cents, not float)
+- Pagination: last page, page beyond total, page 0, negative page
+- Search with no results, search with special regex characters
+- Bulk operations on 0 items, on 1 item, on max allowed items
+- Time-sensitive operations across midnight, month-end, year-end
+
+**6.1.2 — Concurrency Risk Assessment (before writing code):**
+For any feature that involves write operations, present a concurrency analysis:
+```
+⚡ Concurrency Risk Assessment for [Feature Name]:
+
+Write operations in this feature:
+- [list each write operation]
+
+Race condition risks:
+- [for each write: what happens if two requests arrive within 10ms?]
+
+Protection plan:
+- [specific strategy for each risk: transaction, optimistic lock, idempotency key, atomic op, queue]
+
+Database-level protections needed:
+- [unique constraints, indexes, column additions (version, idempotency_key)]
+```
+If no race condition risk exists, briefly state why and proceed.
+Get user confirmation on the protection plan before implementing.
+
+**📚 Concurrency Solution Strategies Reference (consult when designing write operations):**
+
+| Problem | Solution | When to Use |
+|---------|----------|-------------|
+| Two users edit same record | **Optimistic locking** (version column) | Low conflict, reads >> writes |
+| Critical resource (money, stock) | **Pessimistic locking** (SELECT FOR UPDATE) | High conflict, data integrity critical |
+| Duplicate form submission | **Idempotency keys** (client sends unique key per operation) | All payment/order/mutation endpoints |
+| Counter updates (likes, views) | **Atomic DB operations** (`UPDATE SET count = count + 1`) | Any counter/accumulator |
+| Unique resource creation | **Unique constraints + upsert** (DB-level uniqueness) | User registration, slug creation |
+| Complex multi-step workflows | **Queue-based processing** (one worker processes sequentially) | Order processing, file processing |
+| Distributed systems | **Distributed locks** (Redis lock, advisory lock) | Cross-service coordination |
+| Time-sensitive operations | **Database transactions with proper isolation level** | Financial operations, booking |
+
+**Additional concurrency patterns:**
+- **Lazy initialization race:** `if (cache == null) { cache = compute() }` — multiple threads compute simultaneously. Use double-checked locking or eager initialization.
+- **Token refresh race:** Multiple concurrent requests trigger refresh simultaneously. Only one should succeed; others should receive the same new token or retry.
+- **Exactly-once processing:** When using queues, ensure the consumer operation is idempotent or implement deduplication.
+
 **6.2 — Build in order:**
 1. Database migration (if needed)
 2. Data model / repository layer
@@ -658,6 +837,15 @@ Bearer token: `Authorization: Bearer <token>`
 7. Unit tests
 8. Integration tests
 
+**6.2.1 — Complex Logic Handling:**
+When a function or module involves complex business logic (multi-step calculations, state machines, conditional branching, algorithmic logic):
+- **Stop and explain** the proposed approach before coding.
+- **Present a flowchart** (text-based or Mermaid) showing the logic flow.
+- **Get user confirmation** on the logic before implementing.
+- **Break it into small, testable functions** — each function should do one thing.
+- If the logic involves more than 3 conditional branches or steps, always decompose it.
+- Provide a brief summary: *"This function does X. It handles Y scenarios. Here's the flow: ..."*
+
 **6.3 — Quality Gate (after each feature):**
 - [ ] No hard-coded secrets
 - [ ] All inputs validated and sanitized
@@ -666,12 +854,82 @@ Bearer token: `Authorization: Bearer <token>`
 - [ ] Authorization checks on every endpoint
 - [ ] IDOR protection
 - [ ] Proper error handling (no system info leaks)
-- [ ] Edge cases handled
+- [ ] Edge cases handled:
+  - [ ] Null/empty/missing input handling
+  - [ ] Boundary values (min, max, zero, negative)
+  - [ ] Duplicate request / double submit protection
+  - [ ] Concurrent access / race conditions addressed:
+    - [ ] All write operations analyzed for concurrent request safety
+    - [ ] Payment/financial ops use idempotency keys + transactions
+    - [ ] Counters use atomic DB operations (not read-then-write)
+    - [ ] Unique resources protected by DB-level constraints
+    - [ ] Optimistic/pessimistic locking applied where needed
+    - [ ] Duplicate form submission handled (idempotency or UI disable)
+  - [ ] Partial failure recovery (multi-step operations)
+  - [ ] Empty state (first use, no data) handled gracefully
+  - [ ] Pagination edge cases (last page, beyond total, page 0)
 - [ ] No hallucinated packages or APIs
 - [ ] Tests written and meaningful
 - [ ] Code follows project conventions
 
-**6.4 — Complete:** Confirm feature works end-to-end. Ask: *"Next feature or refine this one?"* Update CHANGELOG.md.
+**6.3.1 — Test Summary (after each feature):**
+After writing tests, always provide a summary to the user:
+```
+🧪 Test Summary for [Feature Name]:
+- Unit Tests: [X] tests ([list what they cover])
+- Integration Tests: [X] tests ([list what they cover])
+- Coverage: [what's covered, what's not]
+```
+
+**6.3.2 — UI Testing Guidance:**
+After backend + tests are complete for a feature, ask the user to perform manual UI testing. Provide step-by-step instructions:
+```
+🖥️ Please test the following in your browser:
+
+1. [Step 1 — e.g., Navigate to /login]
+   Expected: [what you should see]
+2. [Step 2 — e.g., Enter invalid email and submit]
+   Expected: [validation error message]
+3. [Step 3 — e.g., Enter valid credentials and submit]
+   Expected: [redirect to dashboard]
+...
+
+❌ If anything doesn't work as expected, tell me what happened and I'll fix it.
+✅ If all steps pass, confirm and we'll move to the next feature.
+```
+
+**6.4 — Git Commit & Push:**
+After each feature passes the quality gate and UI testing:
+- Provide the user with the exact Git commands:
+  ```
+  git add .
+  git commit -m "[feature]: [short description of what was built]"
+  git push origin [branch-name]
+  ```
+- If deploying to Vercel or similar, confirm the deployment succeeded.
+
+**6.5 — Complete:** Confirm feature works end-to-end. Ask: *"Next feature or refine this one?"* Update CHANGELOG.md.
+
+**6.6 — Bug Fix Protocol:**
+When fixing bugs during development (Phase 6 or later), follow this process:
+1. **Reproduce:** Confirm you can reproduce the bug (or understand the exact conditions).
+2. **Root cause analysis:** Identify why the bug happened — not just what, but why it wasn't caught.
+3. **Write regression test FIRST:** Create a test that demonstrates the bug (test should FAIL with the bug present).
+4. **Fix the bug:** Implement the minimal fix.
+5. **Verify regression test PASSES** after the fix.
+6. **Run full test suite:** Ensure no side effects — all existing tests must still pass.
+7. **Extend tests if needed:** If the bug reveals a gap in test coverage (missing edge case, missing concurrency test, missing validation), add additional tests beyond the regression test.
+8. **Update documentation:** If the bug was caused by a missing edge case or race condition that wasn't in the original analysis, update the relevant edge case analysis or concurrency risk assessment.
+9. **Present bug fix summary** to the user:
+   ```
+   🐛 Bug Fix Summary:
+   - Root cause: [what caused the bug]
+   - Fix: [what was changed]
+   - Regression test added: [test name and what it verifies]
+   - Full test suite: [X passed, Y failed]
+   - Side effects: [any other areas potentially affected]
+   ```
+10. **Git commit:** Provide commit message: `[bugfix]: [short description of what was fixed and why]`
 
 **Repeat 6.1–6.4 for every feature until MVP is complete.**
 
@@ -705,6 +963,66 @@ Bearer token: `Authorization: Bearer <token>`
 
 ### ✅ Phase 7 Deliverable: `SECURITY_CHECKLIST.md`
 
+<template id="SECURITY_CHECKLIST">
+```markdown
+# Security Checklist: [Project Name]
+
+## 1. OWASP Top 10 Review
+| # | Category | Status | Findings | Remediation |
+|---|----------|--------|----------|-------------|
+| 1 | Broken Access Control | ✅/⚠️/❌ | [findings] | [actions taken] |
+| 2 | Cryptographic Failures | ✅/⚠️/❌ | ... | ... |
+| 3 | Injection | ✅/⚠️/❌ | ... | ... |
+| 4 | Insecure Design | ✅/⚠️/❌ | ... | ... |
+| 5 | Security Misconfiguration | ✅/⚠️/❌ | ... | ... |
+| 6 | Vulnerable Components | ✅/⚠️/❌ | ... | ... |
+| 7 | Auth Failures | ✅/⚠️/❌ | ... | ... |
+| 8 | Data Integrity Failures | ✅/⚠️/❌ | ... | ... |
+| 9 | Logging & Monitoring | ✅/⚠️/❌ | ... | ... |
+| 10 | SSRF | ✅/⚠️/❌ | ... | ... |
+
+## 2. Dependency Audit
+- **Tool used:** [npm audit / pip audit / etc.]
+- **Vulnerabilities found:** [count by severity]
+- **Resolved:** [count]
+- **Accepted risks:** [if any, with justification]
+
+## 3. Configuration Review
+| Check | Status | Notes |
+|-------|--------|-------|
+| Debug mode OFF in production | ✅/❌ | |
+| CORS restricted to allowed origins | ✅/❌ | |
+| Security headers configured (HSTS, CSP, X-Frame) | ✅/❌ | |
+| HTTPS enforced | ✅/❌ | |
+| Rate limiting active on all endpoints | ✅/❌ | |
+| File upload limits configured | ✅/❌ | |
+| Console.log / debug statements removed | ✅/❌ | |
+
+## 4. Data Protection
+| Check | Status | Notes |
+|-------|--------|-------|
+| Passwords hashed (bcrypt/Argon2/scrypt) | ✅/❌ | |
+| Sensitive data encrypted at rest | ✅/❌ | |
+| HTTPS (TLS) for data in transit | ✅/❌ | |
+| PII handled per compliance (GDPR/KVKK) | ✅/❌ | |
+| Logs clean of sensitive data | ✅/❌ | |
+| .env in .gitignore, no secrets in code | ✅/❌ | |
+
+## 5. Concurrency & Race Condition Review
+| Endpoint/Operation | Protection | Verified |
+|-------------------|-----------|----------|
+| [payment endpoints] | Idempotency + transaction | ✅/❌ |
+| [counters] | Atomic DB operations | ✅/❌ |
+| [unique resources] | DB unique constraints | ✅/❌ |
+| [concurrent edits] | Optimistic/pessimistic locking | ✅/❌ |
+
+## 6. Open Issues
+| # | Severity | Description | Status | Owner |
+|---|----------|-------------|--------|-------|
+| 1 | [Critical/High/Medium/Low] | ... | [Open/Resolved] | ... |
+```
+</template>
+
 ---
 
 # PHASE 8: TESTING & QA
@@ -719,13 +1037,84 @@ Bearer token: `Authorization: Bearer <token>`
 - **Integration tests:** API endpoints with database.
 - **Validation tests:** All input rules.
 - **Auth tests:** Login, register, token refresh, unauthorized, role-based.
-- **Edge case tests:** Empty inputs, boundaries, concurrency.
+- **Edge case tests:** Comprehensive edge case coverage:
+  - Null, undefined, empty string, empty array inputs
+  - Boundary values: 0, -1, MAX_INT, very long strings
+  - Special characters and Unicode in all text fields
+  - Concurrent operations (parallel requests to same resource):
+    - Simulate 2-10 parallel identical write requests — verify only one succeeds or all are idempotent
+    - Test optimistic lock conflicts — verify 409 Conflict returned with clear message
+    - Test counter accuracy under parallel updates (e.g., 100 parallel likes should result in exactly +100)
+    - Test double-submit on payment/order endpoints — verify only one charge
+    - Test concurrent resource creation with unique constraints — verify only one created
+    - Test token refresh under concurrent requests — verify consistent behavior
+  - Duplicate submissions (idempotency verification)
+  - Partial failures (mock step 2 of 3 failing, verify rollback)
+  - Expired tokens / sessions mid-operation
+  - Empty database state (first user, first record)
+  - Pagination boundaries (page 0, last page, beyond last page)
+  - Time-related: timezone handling, DST transitions (if relevant)
 - **Error handling tests:** Graceful failures, proper responses.
 
 ### 8.3 — Manual Test Scenarios
 Generate a list for the user: happy paths, error scenarios, cross-feature interactions, load testing.
 
 ### ✅ Phase 8 Deliverable: `TESTING_STRATEGY.md`
+
+<template id="TESTING_STRATEGY">
+```markdown
+# Testing Strategy: [Project Name]
+
+## 1. Test Coverage Summary
+| Category | Test Count | Coverage | Status |
+|----------|-----------|----------|--------|
+| Unit Tests | [X] | [X%] | ✅/⚠️ |
+| Integration Tests | [X] | [X%] | ✅/⚠️ |
+| Validation Tests | [X] | — | ✅/⚠️ |
+| Auth Tests | [X] | — | ✅/⚠️ |
+| Edge Case Tests | [X] | — | ✅/⚠️ |
+| Concurrency Tests | [X] | — | ✅/⚠️ |
+| **Total** | **[X]** | **[X%]** | |
+
+## 2. Unit Tests
+| Module | Tests | Key Scenarios Covered |
+|--------|-------|----------------------|
+| [auth] | [X] | register, login, token refresh, password hash |
+| [users] | [X] | CRUD, profile update, role change |
+| ... | ... | ... |
+
+## 3. Integration Tests
+| Endpoint Group | Tests | Key Scenarios |
+|---------------|-------|--------------|
+| POST /auth/* | [X] | register flow, login flow, invalid credentials |
+| GET/PUT /users/* | [X] | CRUD with auth, IDOR protection |
+| ... | ... | ... |
+
+## 4. Edge Case & Concurrency Tests
+| Scenario | Test | Result |
+|----------|------|--------|
+| Null/empty inputs on all endpoints | [test name] | ✅/❌ |
+| Boundary values (0, -1, MAX) | [test name] | ✅/❌ |
+| Duplicate form submission | [test name] | ✅/❌ |
+| Concurrent write (parallel requests) | [test name] | ✅/❌ |
+| Counter accuracy under load | [test name] | ✅/❌ |
+| Partial failure rollback | [test name] | ✅/❌ |
+| Expired token mid-operation | [test name] | ✅/❌ |
+| Empty DB state (first user) | [test name] | ✅/❌ |
+| Pagination boundaries | [test name] | ✅/❌ |
+
+## 5. Manual Test Scenarios (for user)
+| # | Scenario | Steps | Expected Result | Status |
+|---|----------|-------|-----------------|--------|
+| 1 | Happy path: full user journey | [steps] | [expected] | ☐ |
+| 2 | Error: invalid registration | [steps] | [expected] | ☐ |
+| 3 | Cross-feature: [scenario] | [steps] | [expected] | ☐ |
+| ... | ... | ... | ... | ☐ |
+
+## 6. Known Gaps & Accepted Risks
+- [any untested areas with justification]
+```
+</template>
 
 ---
 
@@ -749,6 +1138,69 @@ Generate a list for the user: happy paths, error scenarios, cross-feature intera
 - Update README.md. Verify all docs are current. Final CHANGELOG.md entry.
 
 ### ✅ Phase 9 Deliverable: `DEPLOYMENT.md`
+
+<template id="DEPLOYMENT">
+```markdown
+# Deployment Guide: [Project Name]
+
+## 1. Production Configuration
+| Variable | Description | Example | Required |
+|----------|-------------|---------|----------|
+| DATABASE_URL | Production DB connection | postgres://... | Yes |
+| JWT_SECRET | Token signing key | [random 64 chars] | Yes |
+| [VAR] | [description] | [example] | Yes/No |
+
+## 2. Infrastructure
+- **Hosting:** [Vercel / Railway / AWS / etc.]
+- **Database:** [Provider, plan, region]
+- **CDN:** [if applicable]
+- **File Storage:** [if applicable]
+- **Email Service:** [if applicable]
+
+## 3. CI/CD Pipeline
+```
+Push to main → Lint → Test → Security Scan → Build → Deploy → Smoke Test
+```
+- **Tool:** [GitHub Actions / GitLab CI / etc.]
+- **Triggers:** Push to main, PR to main
+- **Rollback:** [procedure]
+
+## 4. Deploy Steps
+1. [Step-by-step deployment procedure]
+2. ...
+
+## 5. Monitoring & Alerting
+| Tool | Purpose | Dashboard URL |
+|------|---------|--------------|
+| [Sentry] | Error tracking | [URL] |
+| [UptimeRobot] | Uptime monitoring | [URL] |
+| [Vercel Analytics] | Performance | [URL] |
+
+**Alert Thresholds:**
+| Metric | Warning | Critical | Action |
+|--------|---------|----------|--------|
+| Error rate | > 1% | > 5% | [action] |
+| Response time | > 2s | > 5s | [action] |
+| Uptime | < 99.9% | < 99% | [action] |
+
+## 6. Backup Strategy
+- **Database:** [frequency, retention, tool]
+- **File storage:** [frequency, retention]
+- **Restore procedure:** [steps]
+
+## 7. Rollback Procedure
+1. [Step-by-step rollback procedure]
+2. ...
+- **Max rollback time:** [target]
+
+## 8. Post-Deploy Checklist
+- [ ] Health check endpoint responds 200
+- [ ] Key user flows work (login, core action, payment)
+- [ ] Monitoring dashboard shows normal metrics
+- [ ] No new errors in error tracker
+- [ ] DNS / SSL certificates valid
+```
+</template>
 
 ---
 
@@ -784,6 +1236,8 @@ Generate a list for the user: happy paths, error scenarios, cross-feature intera
 - Document known issues / limitations.
 - Create backlog for v2 features.
 - Provide maintenance guidelines.
+- **Transition to post-launch operations:** If the user has `Post_Launch_Prompt.md`, recommend loading it for go-to-market execution, marketing, customer support setup, and ongoing operations guidance.
+- **Pre-release audit:** If the user has `Pre_Release_Audit_Prompt.md` and hasn't run the audit yet, recommend running it before the public launch.
 
 ### ✅ Phase 10 Deliverable: A live, working, release-ready product. 🚀
 
@@ -795,9 +1249,79 @@ These files are created and maintained throughout development:
 
 | File | Created In | Updated In | Notes |
 |------|-----------|-----------|-------|
+| `PRODUCT_VISION.md` | Phase 1A | Rarely | Vision, personas, business model |
+| `USER_JOURNEYS.md` | Phase 1B | Phase 6 (if flows change) | Personas, journeys, screens, notifications |
+| `PROJECT_SPEC.md` | Phase 1C | Phase 6 (scope changes) | Consolidated spec: features, tech, risks, roadmap |
+| `ARCHITECTURE.md` | Phase 2 | Rarely | Architecture, folder structure, tech stack |
+| `DATABASE_SCHEMA.md` | Phase 3 | Phase 6 (new migrations) | Schema, relationships, concurrency strategy |
+| `API_DOCS.md` | Phase 4 | Phase 6 (new endpoints) | Endpoint specs, edge cases, concurrency design |
+| `SECURITY_CHECKLIST.md` | Phase 7 | Phase 9 | OWASP review, dependency audit, config review |
+| `TESTING_STRATEGY.md` | Phase 8 | Phase 9 | Coverage, test categories, manual test scenarios |
+| `DEPLOYMENT.md` | Phase 9 | As needed | Production config, CI/CD, monitoring, rollback |
+| `CHANGELOG.md` | Phase 6 | After every feature | Chronological change log |
 | `.env.example` | Phase 5 | As needed | All env vars, no real secrets |
 | `.gitignore` | Phase 5 | Rarely | Comprehensive ignore rules |
 | `README.md` | Phase 5 | Continuously, finalized Phase 9 | Setup, run, and usage instructions |
-| `CHANGELOG.md` | Phase 6 | After every feature | Chronological change log |
 | `docker-compose.yml` | Phase 5 | As needed | Local dev services |
 | CI/CD config | Phase 5 | Phase 9 | Pipeline definition |
+
+---
+
+## 🔄 APPENDIX — QUICK COMMANDS
+
+These are commands the user can send at any time. The AI should recognize and execute them based on the rules in `AI_RULES.md`.
+
+### Start New Project
+```
+Please read AI_RULES.md. I want to start a new project.
+```
+(The AI will then ask for AI_METHODOLOGY.md as directed by the routing table in AI_RULES.md.)
+
+### Resume Project
+```
+Please read AI_RULES.md. We are in Phase [X].
+Here are our project documents: [attach deliverables]
+Let's continue.
+```
+(If the AI needs AI_METHODOLOGY.md for the current phase, it will ask.)
+
+### Mid-Session Security & Quality Check
+```
+Check the code you just wrote:
+1. SQL injection, XSS, or IDOR vulnerabilities?
+2. All user inputs validated?
+3. Any hard-coded secrets?
+4. Error messages leaking system info?
+5. Any hallucinated packages or APIs?
+6. Edge cases handled? (null/empty inputs, concurrent access, duplicate submit, partial failures, boundary values)
+7. Is this production-ready?
+```
+
+### Pre-Deployment Check
+```
+Pre-deployment review:
+1. All .env variables set for production?
+2. Debug modes disabled?
+3. CORS properly restricted?
+4. Rate limiting active?
+5. Logs going to file/service (not console)?
+6. Migrations ready and tested?
+7. Security headers configured?
+8. HTTPS enforced?
+9. Unused endpoints removed?
+10. Dependency vulnerabilities resolved?
+```
+
+### New Feature (Post-Release)
+```
+New feature request. Follow the Phase 6 process from AI_METHODOLOGY.md.
+Feature: [description]
+```
+
+### Bug Fix
+```
+Bug: [short description]
+Expected: ...
+Actual: ...
+Error: [paste error if any]
+```
