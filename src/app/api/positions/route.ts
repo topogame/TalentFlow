@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
-import { createPositionSchema, paginationSchema } from "@/lib/validations";
+import { createPositionSchema, positionListSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
 import { createAuditLog } from "@/lib/audit";
 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (error) return error;
 
   const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-  const parsed = paginationSchema.safeParse(searchParams);
+  const parsed = positionListSchema.safeParse(searchParams);
   if (!parsed.success) {
     return NextResponse.json(
       errorResponse("VALIDATION_ERROR", "Geçersiz parametreler", parsed.error.issues),
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { page, limit, search } = parsed.data;
+  const { page, limit, search, status, priority, workModel, city } = parsed.data;
   const skip = (page - 1) * limit;
 
   const where: Prisma.PositionWhereInput = {};
@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
       { city: { contains: search, mode: "insensitive" } },
     ];
   }
+  if (status) where.status = status;
+  if (priority) where.priority = priority;
+  if (workModel) where.workModel = workModel;
+  if (city) where.city = { contains: city, mode: "insensitive" };
 
   const [positions, total] = await Promise.all([
     prisma.position.findMany({

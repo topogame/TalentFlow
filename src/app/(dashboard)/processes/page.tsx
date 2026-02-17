@@ -22,6 +22,8 @@ type ProcessItem = {
   assignedTo: { id: string; firstName: string; lastName: string };
 };
 
+type UserOption = { id: string; firstName: string; lastName: string };
+
 type Pagination = {
   page: number;
   limit: number;
@@ -38,6 +40,8 @@ export default function ProcessesPage() {
   const [page, setPage] = useState(1);
   const [stageFilter, setStageFilter] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
+  const [assignedToFilter, setAssignedToFilter] = useState("");
+  const [users, setUsers] = useState<UserOption[]>([]);
 
   const fetchProcesses = useCallback(async () => {
     setLoading(true);
@@ -51,6 +55,7 @@ export default function ProcessesPage() {
     }
     if (search) params.set("search", search);
     if (stageFilter) params.set("stage", stageFilter);
+    if (assignedToFilter) params.set("assignedToId", assignedToFilter);
 
     try {
       const res = await fetch(`/api/processes?${params}`);
@@ -66,7 +71,16 @@ export default function ProcessesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, stageFilter, viewMode]);
+  }, [page, search, stageFilter, assignedToFilter, viewMode]);
+
+  useEffect(() => {
+    fetch("/api/users?limit=100")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) setUsers(json.data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchProcesses();
@@ -179,6 +193,30 @@ export default function ProcessesPage() {
             </option>
           ))}
         </select>
+
+        {/* Assigned To filter */}
+        <select
+          value={assignedToFilter}
+          onChange={(e) => { setAssignedToFilter(e.target.value); setPage(1); }}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+        >
+          <option value="">Tüm Sorumlular</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.firstName} {u.lastName}
+            </option>
+          ))}
+        </select>
+
+        {(stageFilter || assignedToFilter) && (
+          <button
+            type="button"
+            onClick={() => { setStageFilter(""); setAssignedToFilter(""); setPage(1); }}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
+          >
+            Temizle
+          </button>
+        )}
       </div>
 
       {/* Content */}

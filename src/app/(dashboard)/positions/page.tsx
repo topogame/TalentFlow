@@ -55,11 +55,19 @@ export default function PositionsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [workModelFilter, setWorkModelFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
 
   const fetchPositions = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (search) params.set("search", search);
+    if (statusFilter) params.set("status", statusFilter);
+    if (priorityFilter) params.set("priority", priorityFilter);
+    if (workModelFilter) params.set("workModel", workModelFilter);
+    if (cityFilter) params.set("city", cityFilter);
     try {
       const res = await fetch(`/api/positions?${params}`);
       const data = await res.json();
@@ -70,7 +78,7 @@ export default function PositionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, statusFilter, priorityFilter, workModelFilter, cityFilter]);
 
   useEffect(() => {
     fetchPositions();
@@ -121,6 +129,69 @@ export default function PositionsPage() {
           Ara
         </button>
       </form>
+
+      {/* Filters */}
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Durum</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            <option value="">Tümü</option>
+            <option value="open">Açık</option>
+            <option value="on_hold">Beklemede</option>
+            <option value="closed">Kapalı</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Öncelik</label>
+          <select
+            value={priorityFilter}
+            onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            <option value="">Tümü</option>
+            <option value="low">Düşük</option>
+            <option value="normal">Normal</option>
+            <option value="high">Yüksek</option>
+            <option value="urgent">Acil</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Çalışma Modeli</label>
+          <select
+            value={workModelFilter}
+            onChange={(e) => { setWorkModelFilter(e.target.value); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            <option value="">Tümü</option>
+            <option value="office">Ofis</option>
+            <option value="remote">Uzaktan</option>
+            <option value="hybrid">Hibrit</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Şehir</label>
+          <input
+            type="text"
+            value={cityFilter}
+            onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
+            placeholder="Şehir..."
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
+          />
+        </div>
+        {(statusFilter || priorityFilter || workModelFilter || cityFilter) && (
+          <button
+            type="button"
+            onClick={() => { setStatusFilter(""); setPriorityFilter(""); setWorkModelFilter(""); setCityFilter(""); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
+          >
+            Temizle
+          </button>
+        )}
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (

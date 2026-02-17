@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse, paginationMeta } from "@/lib/utils";
-import { createFirmSchema, paginationSchema } from "@/lib/validations";
+import { createFirmSchema, firmListSchema } from "@/lib/validations";
 import { Prisma } from "@prisma/client";
 import { createAuditLog } from "@/lib/audit";
 
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   if (error) return error;
 
   const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-  const parsed = paginationSchema.safeParse(searchParams);
+  const parsed = firmListSchema.safeParse(searchParams);
   if (!parsed.success) {
     return NextResponse.json(
       errorResponse("VALIDATION_ERROR", "Geçersiz parametreler", parsed.error.issues),
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { page, limit, search } = parsed.data;
+  const { page, limit, search, sector, city } = parsed.data;
   const skip = (page - 1) * limit;
 
   const where: Prisma.FirmWhereInput = {};
@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       { city: { contains: search, mode: "insensitive" } },
     ];
   }
+  if (sector) where.sector = { contains: sector, mode: "insensitive" };
+  if (city) where.city = { contains: city, mode: "insensitive" };
 
   const [firms, total] = await Promise.all([
     prisma.firm.findMany({

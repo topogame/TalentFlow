@@ -30,11 +30,25 @@ export default function CandidatesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [sector, setSector] = useState("");
+  const [city, setCity] = useState("");
+  const [status, setStatus] = useState("active");
+  const [minExp, setMinExp] = useState("");
+  const [maxExp, setMaxExp] = useState("");
+  const [sort, setSort] = useState("createdAt");
+  const [order, setOrder] = useState<"asc" | "desc">("desc");
 
   const fetchCandidates = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (search) params.set("search", search);
+    if (sector) params.set("sector", sector);
+    if (city) params.set("city", city);
+    params.set("status", status);
+    if (minExp) params.set("minExperience", minExp);
+    if (maxExp) params.set("maxExperience", maxExp);
+    if (sort !== "createdAt") params.set("sort", sort);
+    if (order !== "desc") params.set("order", order);
 
     try {
       const res = await fetch(`/api/candidates?${params}`);
@@ -46,7 +60,7 @@ export default function CandidatesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, sector, city, status, minExp, maxExp, sort, order]);
 
   useEffect(() => {
     fetchCandidates();
@@ -96,6 +110,92 @@ export default function CandidatesPage() {
           Ara
         </button>
       </form>
+
+      {/* Filters */}
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Sektör</label>
+          <input
+            type="text"
+            value={sector}
+            onChange={(e) => { setSector(e.target.value); setPage(1); }}
+            placeholder="Sektör..."
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Şehir</label>
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => { setCity(e.target.value); setPage(1); }}
+            placeholder="Şehir..."
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Durum</label>
+          <select
+            value={status}
+            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            <option value="active">Aktif</option>
+            <option value="passive">Pasif</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Deneyim (yıl)</label>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              value={minExp}
+              onChange={(e) => { setMinExp(e.target.value); setPage(1); }}
+              placeholder="Min"
+              min="0"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-20"
+            />
+            <span className="text-slate-400">-</span>
+            <input
+              type="number"
+              value={maxExp}
+              onChange={(e) => { setMaxExp(e.target.value); setPage(1); }}
+              placeholder="Max"
+              min="0"
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-20"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Sıralama</label>
+          <select
+            value={`${sort}-${order}`}
+            onChange={(e) => {
+              const [s, o] = e.target.value.split("-");
+              setSort(s);
+              setOrder(o as "asc" | "desc");
+              setPage(1);
+            }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            <option value="createdAt-desc">En Yeni</option>
+            <option value="createdAt-asc">En Eski</option>
+            <option value="firstName-asc">Ad (A-Z)</option>
+            <option value="firstName-desc">Ad (Z-A)</option>
+            <option value="totalExperienceYears-desc">Deneyim (Çok→Az)</option>
+            <option value="totalExperienceYears-asc">Deneyim (Az→Çok)</option>
+          </select>
+        </div>
+        {(sector || city || status !== "active" || minExp || maxExp || sort !== "createdAt" || order !== "desc") && (
+          <button
+            type="button"
+            onClick={() => { setSector(""); setCity(""); setStatus("active"); setMinExp(""); setMaxExp(""); setSort("createdAt"); setOrder("desc"); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
+          >
+            Temizle
+          </button>
+        )}
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (

@@ -129,6 +129,26 @@ export const paginationSchema = z.object({
   search: z.string().optional(),
 });
 
+// Firm list
+export const firmListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().optional(),
+  sector: z.string().optional(),
+  city: z.string().optional(),
+});
+
+// Position list
+export const positionListSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  search: z.string().optional(),
+  status: z.enum(["open", "on_hold", "closed"]).optional(),
+  priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
+  workModel: z.enum(["office", "remote", "hybrid"]).optional(),
+  city: z.string().optional(),
+});
+
 // Process
 export const processListSchema = z.object({
   page: z.coerce.number().int().positive().default(1),

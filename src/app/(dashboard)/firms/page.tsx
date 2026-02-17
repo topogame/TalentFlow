@@ -25,11 +25,15 @@ export default function FirmsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [sector, setSector] = useState("");
+  const [city, setCity] = useState("");
 
   const fetchFirms = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "20" });
     if (search) params.set("search", search);
+    if (sector) params.set("sector", sector);
+    if (city) params.set("city", city);
     try {
       const res = await fetch(`/api/firms?${params}`);
       const data = await res.json();
@@ -40,7 +44,7 @@ export default function FirmsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, sector, city]);
 
   useEffect(() => {
     fetchFirms();
@@ -91,6 +95,39 @@ export default function FirmsPage() {
           Ara
         </button>
       </form>
+
+      {/* Filters */}
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Sektör</label>
+          <input
+            type="text"
+            value={sector}
+            onChange={(e) => { setSector(e.target.value); setPage(1); }}
+            placeholder="Sektör..."
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Şehir</label>
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => { setCity(e.target.value); setPage(1); }}
+            placeholder="Şehir..."
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
+          />
+        </div>
+        {(sector || city) && (
+          <button
+            type="button"
+            onClick={() => { setSector(""); setCity(""); setPage(1); }}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
+          >
+            Temizle
+          </button>
+        )}
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
