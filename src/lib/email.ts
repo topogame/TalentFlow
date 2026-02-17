@@ -14,7 +14,7 @@ export type SendEmailParams = {
 };
 
 export async function sendEmail({ to, subject, body, from }: SendEmailParams) {
-  const fromAddress = from || `TalentFlow <${process.env.EMAIL_FROM || "noreply@talentflow.com"}>`;
+  const fromAddress = from || `TalentFlow <${process.env.EMAIL_FROM || "onboarding@resend.dev"}>`;
 
   try {
     const { data, error } = await getResend().emails.send({
