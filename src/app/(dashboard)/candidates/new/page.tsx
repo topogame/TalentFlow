@@ -270,17 +270,30 @@ export default function NewCandidatePage() {
             <div className="space-y-3">
               {languages.map((lang, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <input
-                    type="text"
+                  <select
                     value={lang.language}
                     onChange={(e) => {
                       const updated = [...languages];
                       updated[i].language = e.target.value;
                       setLanguages(updated);
                     }}
-                    placeholder="Dil adı"
                     className={inputClass + " flex-1"}
-                  />
+                  >
+                    <option value="">Dil seçin</option>
+                    <option value="İngilizce">İngilizce</option>
+                    <option value="Almanca">Almanca</option>
+                    <option value="Fransızca">Fransızca</option>
+                    <option value="İspanyolca">İspanyolca</option>
+                    <option value="Rusça">Rusça</option>
+                    <option value="Arapça">Arapça</option>
+                    <option value="Çince">Çince</option>
+                    <option value="Japonca">Japonca</option>
+                    <option value="Korece">Korece</option>
+                    <option value="İtalyanca">İtalyanca</option>
+                    <option value="Portekizce">Portekizce</option>
+                    <option value="Hollandaca">Hollandaca</option>
+                    <option value="Diğer">Diğer</option>
+                  </select>
                   <select
                     value={lang.level}
                     onChange={(e) => {
