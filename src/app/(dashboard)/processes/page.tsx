@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 import {
   PIPELINE_STAGES,
   PIPELINE_STAGE_LABELS,
   STAGE_COLORS,
   STAGE_BG_COLORS,
+  CLOSED_STAGES,
 } from "@/lib/constants";
 
 type ProcessItem = {
@@ -31,6 +38,14 @@ type Pagination = {
   totalPages: number;
 };
 
+type PendingDrop = {
+  processId: string;
+  fromStage: string;
+  toStage: string;
+  sourceIndex: number;
+  destIndex: number;
+};
+
 export default function ProcessesPage() {
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [kanbanData, setKanbanData] = useState<Record<string, ProcessItem[]> | null>(null);
@@ -42,6 +57,13 @@ export default function ProcessesPage() {
   const [viewMode, setViewMode] = useState<"list" | "kanban">("list");
   const [assignedToFilter, setAssignedToFilter] = useState("");
   const [users, setUsers] = useState<UserOption[]>([]);
+
+  // DnD state
+  const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
+  const [closeNote, setCloseNote] = useState("");
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [dragError, setDragError] = useState<string | null>(null);
+  const kanbanSnapshot = useRef<Record<string, ProcessItem[]> | null>(null);
 
   const fetchProcesses = useCallback(async () => {
     setLoading(true);
@@ -86,10 +108,135 @@ export default function ProcessesPage() {
     fetchProcesses();
   }, [fetchProcesses]);
 
+  // Clear drag error after 4 seconds
+  useEffect(() => {
+    if (!dragError) return;
+    const t = setTimeout(() => setDragError(null), 4000);
+    return () => clearTimeout(t);
+  }, [dragError]);
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     setPage(1);
     fetchProcesses();
+  }
+
+  // ─── DnD helpers ───
+
+  function moveCard(
+    data: Record<string, ProcessItem[]>,
+    fromStage: string,
+    toStage: string,
+    sourceIndex: number,
+    destIndex: number
+  ): Record<string, ProcessItem[]> {
+    const fromItems = [...(data[fromStage] || [])];
+    const toItems = fromStage === toStage ? fromItems : [...(data[toStage] || [])];
+    const [moved] = fromItems.splice(sourceIndex, 1);
+    const updated = { ...moved, stage: toStage };
+    if (fromStage === toStage) {
+      fromItems.splice(destIndex, 0, updated);
+    } else {
+      toItems.splice(destIndex, 0, updated);
+    }
+    return {
+      ...data,
+      [fromStage]: fromItems,
+      ...(fromStage !== toStage ? { [toStage]: toItems } : {}),
+    };
+  }
+
+  async function applyStageChange(processId: string, toStage: string, note?: string) {
+    const body: Record<string, string> = { stage: toStage };
+    if (note) body.note = note;
+
+    const res = await fetch(`/api/processes/${processId}/stage`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Aşama değiştirilemedi" }));
+      throw new Error(err.error || "Aşama değiştirilemedi");
+    }
+  }
+
+  function rollback() {
+    if (kanbanSnapshot.current) {
+      setKanbanData(kanbanSnapshot.current);
+      kanbanSnapshot.current = null;
+    }
+  }
+
+  async function handleDragEnd(result: DropResult) {
+    const { source, destination, draggableId } = result;
+
+    // Dropped outside
+    if (!destination) return;
+    // Same position
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    if (!kanbanData) return;
+
+    const fromStage = source.droppableId;
+    const toStage = destination.droppableId;
+
+    // If moving to a closing stage, show confirmation modal
+    if (
+      fromStage !== toStage &&
+      (CLOSED_STAGES as readonly string[]).includes(toStage)
+    ) {
+      setPendingDrop({
+        processId: draggableId,
+        fromStage,
+        toStage,
+        sourceIndex: source.index,
+        destIndex: destination.index,
+      });
+      setCloseNote("");
+      setShowCloseModal(true);
+      return;
+    }
+
+    // Optimistic update
+    kanbanSnapshot.current = kanbanData;
+    setKanbanData(moveCard(kanbanData, fromStage, toStage, source.index, destination.index));
+
+    if (fromStage !== toStage) {
+      try {
+        await applyStageChange(draggableId, toStage);
+      } catch (err) {
+        rollback();
+        setDragError(err instanceof Error ? err.message : "Aşama değiştirilemedi");
+      }
+    }
+  }
+
+  async function confirmCloseDrop() {
+    if (!pendingDrop || !kanbanData) return;
+
+    const { processId, fromStage, toStage, sourceIndex, destIndex } = pendingDrop;
+
+    // Optimistic update
+    kanbanSnapshot.current = kanbanData;
+    setKanbanData(moveCard(kanbanData, fromStage, toStage, sourceIndex, destIndex));
+    setShowCloseModal(false);
+
+    try {
+      await applyStageChange(processId, toStage, closeNote || undefined);
+    } catch (err) {
+      rollback();
+      setDragError(err instanceof Error ? err.message : "Süreç kapatılamadı");
+    }
+    setPendingDrop(null);
+    setCloseNote("");
+  }
+
+  function cancelCloseDrop() {
+    setShowCloseModal(false);
+    setPendingDrop(null);
+    setCloseNote("");
   }
 
   function renderStars(score: number | null) {
@@ -127,6 +274,16 @@ export default function ProcessesPage() {
           Yeni Süreç
         </Link>
       </div>
+
+      {/* Drag error toast */}
+      {dragError && (
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
+          <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+          {dragError}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -293,60 +450,101 @@ export default function ProcessesPage() {
           )}
         </div>
       ) : (
-        /* Kanban View */
+        /* Kanban View with DnD */
         <div className="mt-6">
           {loading ? (
             <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-400 shadow-sm">
               <div className="animate-pulse-soft text-lg">Yükleniyor...</div>
             </div>
           ) : kanbanData ? (
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {PIPELINE_STAGES.map((stage) => {
-                const items = kanbanData[stage] || [];
-                return (
-                  <div key={stage} className={`min-w-[280px] flex-shrink-0 rounded-xl border border-slate-200 ${STAGE_BG_COLORS[stage]} shadow-sm`}>
-                    <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                      <h3 className="text-sm font-semibold text-slate-900">
-                        {PIPELINE_STAGE_LABELS[stage]}
-                      </h3>
-                      <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-semibold ${STAGE_COLORS[stage]}`}>
-                        {items.length}
-                      </span>
-                    </div>
-                    <div className="space-y-3 p-3">
-                      {items.length === 0 ? (
-                        <p className="py-4 text-center text-xs text-slate-400">Süreç yok</p>
-                      ) : (
-                        items.map((p) => (
-                          <Link
-                            key={p.id}
-                            href={`/processes/${p.id}`}
-                            className="block rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all duration-150 hover:shadow-md"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700">
-                                {p.candidate.firstName[0]}{p.candidate.lastName[0]}
-                              </div>
-                              <span className="text-sm font-medium text-slate-900">
-                                {p.candidate.firstName} {p.candidate.lastName}
-                              </span>
-                            </div>
-                            <p className="mt-1.5 text-xs text-slate-600">{p.position.title}</p>
-                            <p className="text-xs text-slate-400">{p.firm.name}</p>
-                            <div className="mt-2 flex items-center justify-between">
-                              {renderStars(p.fitnessScore)}
-                              <span className="text-[10px] text-slate-400">
-                                {p.assignedTo.firstName[0]}{p.assignedTo.lastName[0]}
-                              </span>
-                            </div>
-                          </Link>
-                        ))
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {PIPELINE_STAGES.map((stage) => {
+                  const items = kanbanData[stage] || [];
+                  return (
+                    <Droppable key={stage} droppableId={stage}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={`min-w-[280px] flex-shrink-0 rounded-xl border transition-colors duration-200 ${
+                            snapshot.isDraggingOver
+                              ? "border-indigo-300 ring-2 ring-indigo-200/50"
+                              : "border-slate-200"
+                          } ${STAGE_BG_COLORS[stage]} shadow-sm`}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                            <h3 className="text-sm font-semibold text-slate-900">
+                              {PIPELINE_STAGE_LABELS[stage]}
+                            </h3>
+                            <span className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-semibold ${STAGE_COLORS[stage]}`}>
+                              {items.length}
+                            </span>
+                          </div>
+                          <div className="space-y-3 p-3" style={{ minHeight: 60 }}>
+                            {items.length === 0 && !snapshot.isDraggingOver ? (
+                              <p className="py-4 text-center text-xs text-slate-400">Süreç yok</p>
+                            ) : (
+                              items.map((p, index) => (
+                                <Draggable
+                                  key={p.id}
+                                  draggableId={p.id}
+                                  index={index}
+                                  isDragDisabled={!!p.closedAt}
+                                >
+                                  {(dragProvided, dragSnapshot) => (
+                                    <div
+                                      ref={dragProvided.innerRef}
+                                      {...dragProvided.draggableProps}
+                                      {...dragProvided.dragHandleProps}
+                                      onClick={() => {
+                                        if (!dragSnapshot.isDragging) {
+                                          window.location.href = `/processes/${p.id}`;
+                                        }
+                                      }}
+                                      className={`rounded-lg border bg-white p-3 shadow-sm transition-all duration-150 ${
+                                        dragSnapshot.isDragging
+                                          ? "rotate-2 scale-105 border-indigo-300 shadow-lg ring-2 ring-indigo-200/50"
+                                          : p.closedAt
+                                            ? "border-slate-200 opacity-50 cursor-default"
+                                            : "border-slate-200 cursor-pointer hover:shadow-md"
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-semibold text-indigo-700">
+                                          {p.candidate.firstName[0]}{p.candidate.lastName[0]}
+                                        </div>
+                                        <span className="text-sm font-medium text-slate-900">
+                                          {p.candidate.firstName} {p.candidate.lastName}
+                                        </span>
+                                        {p.closedAt && (
+                                          <svg className="ml-auto h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                      <p className="mt-1.5 text-xs text-slate-600">{p.position.title}</p>
+                                      <p className="text-xs text-slate-400">{p.firm.name}</p>
+                                      <div className="mt-2 flex items-center justify-between">
+                                        {renderStars(p.fitnessScore)}
+                                        <span className="text-[10px] text-slate-400">
+                                          {p.assignedTo.firstName[0]}{p.assignedTo.lastName[0]}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))
+                            )}
+                            {provided.placeholder}
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    </Droppable>
+                  );
+                })}
+              </div>
+            </DragDropContext>
           ) : null}
         </div>
       )}
@@ -375,6 +573,74 @@ export default function ProcessesPage() {
             >
               Sonraki
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Close Stage Confirmation Modal */}
+      {showCloseModal && pendingDrop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                pendingDrop.toStage === "positive" ? "bg-emerald-100" : "bg-rose-100"
+              }`}>
+                {pendingDrop.toStage === "positive" ? (
+                  <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Süreç Kapatılacak</h3>
+                <p className="text-sm text-slate-500">
+                  Bu süreç{" "}
+                  <span className="font-medium">
+                    {PIPELINE_STAGE_LABELS[pendingDrop.toStage]}
+                  </span>
+                  {" "}olarak işaretlenecek ve kapatılacak.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label htmlFor="closeNote" className="block text-sm font-medium text-slate-700">
+                Not (opsiyonel)
+              </label>
+              <textarea
+                id="closeNote"
+                value={closeNote}
+                onChange={(e) => setCloseNote(e.target.value)}
+                rows={3}
+                placeholder="Kapatma sebebi veya ek bilgi..."
+                className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={cancelCloseDrop}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={confirmCloseDrop}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors ${
+                  pendingDrop.toStage === "positive"
+                    ? "bg-emerald-600 hover:bg-emerald-700"
+                    : "bg-rose-600 hover:bg-rose-700"
+                }`}
+              >
+                {pendingDrop.toStage === "positive" ? "Olumlu Kapat" : "Olumsuz Kapat"}
+              </button>
+            </div>
           </div>
         </div>
       )}

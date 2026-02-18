@@ -15,6 +15,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.19.2",
     "@vercel/blob": "^2.2.0",
