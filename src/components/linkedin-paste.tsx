@@ -88,14 +88,20 @@ export default function LinkedInPaste({ onParsed, disabled }: LinkedInPasteProps
         </button>
       </div>
 
-      <p className="text-xs text-slate-500 mb-3">
-        LinkedIn profil sayfasındaki metni kopyalayıp buraya yapıştırın. AI ile analiz ederek form alanlarını otomatik dolduracağız.
-      </p>
+      <div className="mb-3 rounded-lg bg-blue-100/60 px-3 py-2.5">
+        <p className="text-xs font-medium text-blue-800 mb-1.5">Nasıl kullanılır?</p>
+        <ol className="text-xs text-blue-700 space-y-0.5 list-decimal list-inside">
+          <li>LinkedIn'de adayın profil sayfasını açın</li>
+          <li><strong>Ctrl+A</strong> ile tüm sayfayı seçin, <strong>Ctrl+C</strong> ile kopyalayın</li>
+          <li>Aşağıdaki alana <strong>Ctrl+V</strong> ile yapıştırın</li>
+          <li><strong>"AI ile Analiz Et"</strong> butonuna tıklayın — form otomatik dolacak</li>
+        </ol>
+      </div>
 
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="LinkedIn profilindeki ad, deneyim, eğitim, beceriler vb. bilgileri buraya yapıştırın..."
+        placeholder="LinkedIn profil sayfasının içeriğini buraya yapıştırın (Ctrl+V)...&#10;&#10;Örnek:&#10;Ahmet Yılmaz&#10;İstanbul, Türkiye&#10;Yazılım Mühendisi | TechCorp&#10;&#10;Deneyim:&#10;- Senior Yazılım Mühendisi, TechCorp (2021 - Günümüz)&#10;..."
         rows={8}
         disabled={loading}
         className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"

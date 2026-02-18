@@ -88,14 +88,20 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
         </button>
       </div>
 
-      <p className="text-xs text-slate-500 mb-3">
-        İş ilanı metnini kopyalayıp buraya yapıştırın. AI ile analiz ederek pozisyon alanlarını otomatik dolduracağız.
-      </p>
+      <div className="mb-3 rounded-lg bg-indigo-100/60 px-3 py-2.5">
+        <p className="text-xs font-medium text-indigo-800 mb-1.5">Nasıl kullanılır?</p>
+        <ol className="text-xs text-indigo-700 space-y-0.5 list-decimal list-inside">
+          <li>İş ilanı sayfasını açın (LinkedIn, Kariyer.net, firma sitesi vb.)</li>
+          <li><strong>Ctrl+A</strong> ile tüm metni seçin, <strong>Ctrl+C</strong> ile kopyalayın</li>
+          <li>Aşağıdaki alana <strong>Ctrl+V</strong> ile yapıştırın</li>
+          <li><strong>"AI ile Analiz Et"</strong> butonuna tıklayın — form otomatik dolacak</li>
+        </ol>
+      </div>
 
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="İş ilanının başlık, gereksinimler, sorumluluklar, konum, maaş vb. bilgilerini buraya yapıştırın..."
+        placeholder="İş ilanı metnini buraya yapıştırın (Ctrl+V)...&#10;&#10;Örnek:&#10;Senior Frontend Developer — TechCorp&#10;Konum: İstanbul (Hibrit)&#10;Maaş: 50.000 - 80.000 TRY&#10;&#10;Aranan Nitelikler:&#10;- 5 yıl deneyim&#10;..."
         rows={8}
         disabled={loading}
         className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
