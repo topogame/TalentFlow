@@ -351,6 +351,12 @@ export const importCandidateRowSchema = z.object({
   })).optional(),
 });
 
+// CV Parse
+export const cvParseRequestSchema = z.object({
+  fileUrl: z.string().url("Geçerli bir dosya URL'si gerekli"),
+  fileType: z.string().min(1, "Dosya türü gerekli"),
+});
+
 // Custom Report
 export const customReportSchema = z.object({
   entityType: z.enum(["candidates", "firms", "positions", "processes", "interviews"]),

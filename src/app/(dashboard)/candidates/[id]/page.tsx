@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PIPELINE_STAGE_LABELS, STAGE_COLORS } from "@/lib/constants";
+import DocumentUpload from "@/components/document-upload";
 
 type Candidate = {
   id: string;
@@ -442,6 +443,7 @@ export default function CandidateDetailPage() {
 
         {activeTab === "documents" && (
           <div>
+            <DocumentUpload candidateId={candidate.id} onUploaded={fetchCandidate} />
             {candidate.documents.length === 0 ? (
               <div className="py-8 text-center">
                 <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

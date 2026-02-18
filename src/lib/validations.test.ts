@@ -29,6 +29,7 @@ import {
   reportsQuerySchema,
   importCandidateRowSchema,
   customReportSchema,
+  cvParseRequestSchema,
 } from "./validations";
 
 // ─── Login Schema ───
@@ -1235,5 +1236,55 @@ describe("customReportSchema", () => {
       columns,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+// ─── CV Parse Request Schema ───
+
+describe("cvParseRequestSchema", () => {
+  it("accepts valid request", () => {
+    const result = cvParseRequestSchema.safeParse({
+      fileUrl: "https://blob.vercel-storage.com/documents/cv.pdf",
+      fileType: "application/pdf",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid URL", () => {
+    const result = cvParseRequestSchema.safeParse({
+      fileUrl: "not-a-url",
+      fileType: "application/pdf",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing fileUrl", () => {
+    const result = cvParseRequestSchema.safeParse({
+      fileType: "application/pdf",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing fileType", () => {
+    const result = cvParseRequestSchema.safeParse({
+      fileUrl: "https://example.com/cv.pdf",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty fileType", () => {
+    const result = cvParseRequestSchema.safeParse({
+      fileUrl: "https://example.com/cv.pdf",
+      fileType: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts DOCX file type", () => {
+    const result = cvParseRequestSchema.safeParse({
+      fileUrl: "https://example.com/cv.docx",
+      fileType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    expect(result.success).toBe(true);
   });
 });
