@@ -102,6 +102,27 @@ export const EMAIL_DYNAMIC_FIELDS = [
   { key: "{consultantName}", label: "Danışman Adı", description: "Sorumlu danışman" },
 ] as const;
 
+// ─── AI Matching ───
+export const MATCH_CATEGORY_LABELS: Record<string, string> = {
+  experience: "Deneyim",
+  salary: "Maaş Uyumu",
+  location: "Konum",
+  education: "Eğitim",
+  skills: "Beceri/Yetkinlik",
+  language: "Dil",
+  sector: "Sektör Uyumu",
+};
+
+export const EDUCATION_HIERARCHY: Record<string, number> = {
+  "Lise": 1,
+  "Ön Lisans": 2,
+  "Lisans": 3,
+  "Yüksek Lisans": 4,
+  "Doktora": 5,
+};
+
+export const MAX_MATCH_CANDIDATES = 20;
+
 // ─── Audit Log ───
 export const AUDIT_ACTIONS = [
   "create",

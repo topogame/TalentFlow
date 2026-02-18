@@ -20,6 +20,10 @@ type Position = {
   minExperienceYears: number | null;
   description: string | null;
   requirements: string | null;
+  requiredSkills: string | null;
+  sectorPreference: string | null;
+  educationRequirement: string | null;
+  languageRequirement: string | null;
   firm: { id: string; name: string };
 };
 
@@ -92,6 +96,10 @@ export default function EditPositionPage() {
       country: formData.get("country") || undefined,
       description: formData.get("description") || undefined,
       requirements: formData.get("requirements") || undefined,
+      requiredSkills: formData.get("requiredSkills") || undefined,
+      sectorPreference: formData.get("sectorPreference") || undefined,
+      educationRequirement: formData.get("educationRequirement") || undefined,
+      languageRequirement: formData.get("languageRequirement") || undefined,
       priority: formData.get("priority") || "normal",
     };
 
@@ -241,6 +249,22 @@ export default function EditPositionPage() {
             <div>
               <label className="block text-sm font-medium text-slate-700">Şehir</label>
               <input name="city" type="text" defaultValue={position.city ?? ""} className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Sektör Tercihi</label>
+              <input name="sectorPreference" type="text" defaultValue={position.sectorPreference ?? ""} className={inputClass} placeholder="ör. Teknoloji, Finans" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Eğitim Gereksinimi</label>
+              <input name="educationRequirement" type="text" defaultValue={position.educationRequirement ?? ""} className={inputClass} placeholder="ör. Lisans" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700">Dil Gereksinimi</label>
+              <input name="languageRequirement" type="text" defaultValue={position.languageRequirement ?? ""} className={inputClass} placeholder="ör. İngilizce (İleri), Almanca (Orta)" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700">Gerekli Beceriler</label>
+              <textarea name="requiredSkills" rows={3} defaultValue={position.requiredSkills ?? ""} className={inputClass} placeholder="ör. React, TypeScript, Node.js, SQL" />
             </div>
           </div>
         </div>

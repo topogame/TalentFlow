@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PIPELINE_STAGE_LABELS } from "@/lib/constants";
+import { PIPELINE_STAGE_LABELS, MATCH_CATEGORY_LABELS } from "@/lib/constants";
 
 type Process = {
   id: string;
@@ -34,6 +34,10 @@ type Position = {
   minExperienceYears: number | null;
   description: string | null;
   requirements: string | null;
+  requiredSkills: string | null;
+  sectorPreference: string | null;
+  educationRequirement: string | null;
+  languageRequirement: string | null;
   firm: { id: string; name: string };
   createdBy: { firstName: string; lastName: string };
   processes: Process[];
@@ -59,11 +63,53 @@ const WORK_MODEL_LABELS: Record<string, string> = {
   hybrid: "Hibrit",
 };
 
+type MatchCategoryResult = {
+  category: string;
+  score: number;
+  explanation: string;
+};
+
+type MatchCandidateResult = {
+  candidateId: string;
+  candidateName: string;
+  currentTitle: string | null;
+  currentSector: string | null;
+  city: string | null;
+  overallScore: number;
+  categories: MatchCategoryResult[];
+};
+
+type MatchData = {
+  positionId: string;
+  candidates: MatchCandidateResult[];
+  generatedAt: string;
+  aiAvailable: boolean;
+};
+
+function getScoreColor(score: number): string {
+  if (score >= 75) return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  if (score >= 50) return "text-amber-700 bg-amber-50 border-amber-200";
+  return "text-rose-700 bg-rose-50 border-rose-200";
+}
+
+function getBarColor(score: number): string {
+  if (score >= 75) return "bg-emerald-500";
+  if (score >= 50) return "bg-amber-500";
+  return "bg-rose-500";
+}
+
 export default function PositionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [position, setPosition] = useState<Position | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Match state
+  const [matchResults, setMatchResults] = useState<MatchData | null>(null);
+  const [matchLoading, setMatchLoading] = useState(false);
+  const [matchError, setMatchError] = useState("");
+  const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
+  const [addingToProcess, setAddingToProcess] = useState<string | null>(null);
 
   const fetchPosition = useCallback(async () => {
     const res = await fetch(`/api/positions/${id}`);
@@ -76,6 +122,59 @@ export default function PositionDetailPage() {
   useEffect(() => {
     fetchPosition();
   }, [fetchPosition]);
+
+  async function runMatching() {
+    setMatchLoading(true);
+    setMatchError("");
+    setMatchResults(null);
+    try {
+      const res = await fetch(`/api/positions/${id}/match-candidates`);
+      const data = await res.json();
+      if (!data.success) {
+        setMatchError(data.error?.message || "Eşleştirme yapılamadı");
+        return;
+      }
+      setMatchResults(data.data);
+    } catch {
+      setMatchError("Eşleştirme sırasında bir hata oluştu");
+    } finally {
+      setMatchLoading(false);
+    }
+  }
+
+  async function addToProcess(candidateId: string) {
+    if (!position) return;
+    setAddingToProcess(candidateId);
+    try {
+      const res = await fetch("/api/processes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId,
+          firmId: position.firm.id,
+          positionId: position.id,
+          stage: "pool",
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error?.message || "Sürece eklenemedi");
+        return;
+      }
+      // Remove from match results and refresh position
+      if (matchResults) {
+        setMatchResults({
+          ...matchResults,
+          candidates: matchResults.candidates.filter((c) => c.candidateId !== candidateId),
+        });
+      }
+      fetchPosition();
+    } catch {
+      alert("Sürece ekleme sırasında bir hata oluştu");
+    } finally {
+      setAddingToProcess(null);
+    }
+  }
 
   if (loading)
     return (
@@ -177,6 +276,36 @@ export default function PositionDetailPage() {
               <p className="whitespace-pre-line text-sm text-slate-600">{position.requirements}</p>
             </div>
           )}
+          {position.requiredSkills && (
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <h4 className="mb-2 text-sm font-medium text-slate-700">Gerekli Beceriler</h4>
+              <p className="whitespace-pre-line text-sm text-slate-600">{position.requiredSkills}</p>
+            </div>
+          )}
+          {(position.sectorPreference || position.educationRequirement || position.languageRequirement) && (
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <dl className="space-y-3 text-sm">
+                {position.sectorPreference && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">Sektör Tercihi</dt>
+                    <dd className="text-slate-900">{position.sectorPreference}</dd>
+                  </div>
+                )}
+                {position.educationRequirement && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">Eğitim Gereksinimi</dt>
+                    <dd className="text-slate-900">{position.educationRequirement}</dd>
+                  </div>
+                )}
+                {position.languageRequirement && (
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">Dil Gereksinimi</dt>
+                    <dd className="text-slate-900">{position.languageRequirement}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -252,6 +381,163 @@ export default function PositionDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Önerilen Adaylar Section */}
+      {position.status === "open" && (
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg className="h-4 w-4 text-violet-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+              </svg>
+              <h3 className="font-semibold text-slate-900">Önerilen Adaylar</h3>
+            </div>
+            {!matchLoading && (
+              <button
+                onClick={runMatching}
+                className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-700 hover:shadow-md"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+                {matchResults ? "Yeniden Analiz Et" : "AI Eşleşme Analizi Yap"}
+              </button>
+            )}
+          </div>
+
+          {matchLoading && (
+            <div className="flex items-center justify-center gap-3 py-12">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
+              <span className="text-sm text-slate-600">Adaylar analiz ediliyor...</span>
+            </div>
+          )}
+
+          {matchError && (
+            <div className="rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{matchError}</div>
+          )}
+
+          {matchResults && !matchLoading && (
+            <>
+              {!matchResults.aiAvailable && (
+                <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+                  AI analizi yapılamadı, sadece kural tabanlı puanlama kullanıldı
+                </div>
+              )}
+
+              {matchResults.candidates.length === 0 ? (
+                <div className="py-8 text-center">
+                  <svg className="mx-auto h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                  </svg>
+                  <p className="mt-2 text-sm text-slate-500">Uygun aday bulunamadı</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {matchResults.candidates.map((candidate) => (
+                    <div
+                      key={candidate.candidateId}
+                      className="rounded-lg border border-slate-100 transition-colors hover:border-slate-200"
+                    >
+                      <div
+                        className="flex cursor-pointer items-center justify-between p-4"
+                        onClick={() =>
+                          setExpandedCandidate(
+                            expandedCandidate === candidate.candidateId ? null : candidate.candidateId
+                          )
+                        }
+                      >
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`inline-flex min-w-[3rem] items-center justify-center rounded-full border px-3 py-1 text-sm font-bold ${getScoreColor(candidate.overallScore)}`}
+                          >
+                            {candidate.overallScore}
+                          </span>
+                          <div>
+                            <Link
+                              href={`/candidates/${candidate.candidateId}`}
+                              className="text-sm font-medium text-indigo-600 transition-colors hover:text-indigo-700"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {candidate.candidateName}
+                            </Link>
+                            <p className="text-xs text-slate-500">
+                              {[candidate.currentTitle, candidate.currentSector, candidate.city]
+                                .filter(Boolean)
+                                .join(" · ") || "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToProcess(candidate.candidateId);
+                            }}
+                            disabled={addingToProcess === candidate.candidateId}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50"
+                          >
+                            {addingToProcess === candidate.candidateId ? (
+                              <div className="h-3 w-3 animate-spin rounded-full border border-indigo-300 border-t-indigo-600" />
+                            ) : (
+                              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                              </svg>
+                            )}
+                            Sürece Ekle
+                          </button>
+                          <svg
+                            className={`h-4 w-4 text-slate-400 transition-transform ${expandedCandidate === candidate.candidateId ? "rotate-180" : ""}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {expandedCandidate === candidate.candidateId && (
+                        <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                          <div className="space-y-2.5">
+                            {candidate.categories.map((cat) => (
+                              <div key={cat.category} className="flex items-center gap-3">
+                                <span className="w-28 text-xs font-medium text-slate-500">
+                                  {MATCH_CATEGORY_LABELS[cat.category] || cat.category}
+                                </span>
+                                <div className="flex flex-1 items-center gap-2">
+                                  <div className="h-2 flex-1 rounded-full bg-slate-100">
+                                    <div
+                                      className={`h-2 rounded-full ${getBarColor(cat.score)}`}
+                                      style={{ width: `${cat.score}%` }}
+                                    />
+                                  </div>
+                                  <span className="w-8 text-right text-xs font-semibold text-slate-700">
+                                    {cat.score}
+                                  </span>
+                                </div>
+                                <span className="w-48 truncate text-xs text-slate-500" title={cat.explanation}>
+                                  {cat.explanation}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {!matchResults && !matchLoading && !matchError && (
+            <p className="py-4 text-center text-sm text-slate-500">
+              AI ile adayları analiz etmek için yukarıdaki butona tıklayın
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

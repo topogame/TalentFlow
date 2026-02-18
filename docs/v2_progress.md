@@ -25,19 +25,38 @@
 - Sürükleme sırasında görsel feedback (döndürme, büyütme, hedef vurgulama)
 - **Detay:** [kanban_dnd_test.md](kanban_dnd_test.md)
 
+### 3. AI CV Parsing (Yapay Zeka ile CV Okuma)
+**Durum:** Tamamlandı | **Commit:** `6ce8b47`
+
+- CV yükle → Vercel Blob'a kaydet → AI ile analiz et → form alanlarını otomatik doldur
+- PDF (Claude native) ve DOCX (mammoth) desteği
+- Aday detay sayfasında belgeler tabına dosya yükleme
+- 25 yeni test eklendi (toplam: 357)
+- **Detay:** [ai_cv_parsing_test.md](ai_cv_parsing_test.md)
+
+### 4. AI Aday-Pozisyon Eşleştirme
+**Durum:** Tamamlandı | **Commit:** (bekliyor)
+
+- Hibrit puanlama: Kural tabanlı (%40) + Claude AI (%60)
+- 7 kategori: Deneyim, Maaş, Konum, Eğitim, Beceri, Dil, Sektör
+- Pozisyon detayında "Önerilen Adaylar" bölümü (puan rozeti, bar grafik, kategori açıklamaları)
+- "Sürece Ekle" ile tek tıkla aday havuza ekleme
+- Pozisyon formlarına 4 yeni alan: Gerekli Beceriler, Sektör Tercihi, Eğitim Gereksinimi, Dil Gereksinimi
+- AI hatası durumunda graceful fallback
+- 67 yeni test eklendi (toplam: 424)
+- **Detay:** [ai_matching_test.md](ai_matching_test.md)
+
 ---
 
 ## Kalan Özellikler
 
 | # | Özellik | Öncelik | Açıklama | Durum |
 |---|---------|---------|----------|-------|
-| 1 | **AI CV Parsing** | Yüksek | PDF/Word CV yükleyince yapay zeka ile otomatik aday formu doldurma | Bekliyor |
-| 2 | **AI Aday-Pozisyon Eşleştirme** | Yüksek | Pozisyon açıldığında en uygun adayları otomatik puanlama ve sıralama | Bekliyor |
-| 3 | **LinkedIn / Kariyer.net Entegrasyonu** | Orta | Tek tıkla profil aktarma, otomatik başvuru senkronizasyonu | Bekliyor |
-| 4 | **Teams / Zoom Otomatik Toplantı** | Orta | Mülakat oluştururken otomatik toplantı linki + davetiye e-postası | Bekliyor |
-| 5 | **Aday Self-Service Portalı** | Orta | Adaylar kendi başvurularını takip edebileceği portal | Bekliyor |
-| 6 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
-| 7 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
+| 1 | **LinkedIn / Kariyer.net Entegrasyonu** | Orta | Tek tıkla profil aktarma, otomatik başvuru senkronizasyonu | Bekliyor |
+| 2 | **Teams / Zoom Otomatik Toplantı** | Orta | Mülakat oluştururken otomatik toplantı linki + davetiye e-postası | Bekliyor |
+| 3 | **Aday Self-Service Portalı** | Orta | Adaylar kendi başvurularını takip edebileceği portal | Bekliyor |
+| 4 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
+| 5 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
 
 ---
 
@@ -45,12 +64,12 @@
 
 | Metrik | Değer |
 |--------|-------|
-| **Tamamlanan özellik** | 2 / 9 |
-| **Toplam test** | 332 |
-| **Test dosyası** | 8 |
-| **API route** | 56 |
+| **Tamamlanan özellik** | 4 / 9 |
+| **Toplam test** | 424 |
+| **Test dosyası** | 11 |
+| **API route** | 60 |
 | **Build** | Başarılı (Next.js 16.1.6, Turbopack) |
-| **Son commit** | `e671ae3` — Kanban DnD |
+| **Son commit** | `6ce8b47` — AI CV Parsing |
 | **Branch** | `master` |
 
 ---

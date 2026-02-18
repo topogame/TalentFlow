@@ -386,6 +386,72 @@ describe("createPositionSchema", () => {
       expect(result.data.priority).toBe("normal");
     }
   });
+
+  it("accepts requiredSkills field", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Developer",
+      requiredSkills: "React, TypeScript, Node.js",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts sectorPreference field", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Developer",
+      sectorPreference: "Teknoloji",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects sectorPreference longer than 200 chars", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Developer",
+      sectorPreference: "x".repeat(201),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts educationRequirement field", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Developer",
+      educationRequirement: "Lisans",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts languageRequirement field", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Developer",
+      languageRequirement: "İngilizce (İleri), Almanca (Orta)",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects languageRequirement longer than 500 chars", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Developer",
+      languageRequirement: "x".repeat(501),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts all new fields together", () => {
+    const result = createPositionSchema.safeParse({
+      firmId: "550e8400-e29b-41d4-a716-446655440000",
+      title: "Senior Developer",
+      requiredSkills: "React, TypeScript",
+      sectorPreference: "Teknoloji",
+      educationRequirement: "Lisans",
+      languageRequirement: "İngilizce (İleri)",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 // ─── Pagination Schema ───

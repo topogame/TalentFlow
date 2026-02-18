@@ -117,6 +117,10 @@ export const createPositionSchema = z.object({
   country: z.string().max(100).optional().or(z.literal("")),
   description: z.string().optional().or(z.literal("")),
   requirements: z.string().optional().or(z.literal("")),
+  requiredSkills: z.string().optional().or(z.literal("")),
+  sectorPreference: z.string().max(200).optional().or(z.literal("")),
+  educationRequirement: z.string().max(200).optional().or(z.literal("")),
+  languageRequirement: z.string().max(500).optional().or(z.literal("")),
   priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
 });
 
