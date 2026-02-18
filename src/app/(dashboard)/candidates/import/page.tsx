@@ -79,8 +79,9 @@ export default function CandidateImportPage() {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0];
     if (f) {
-      if (!f.name.toLowerCase().endsWith(".xlsx")) {
-        setUploadError("Sadece .xlsx dosyaları desteklenir");
+      const ext = f.name.toLowerCase();
+      if (!ext.endsWith(".xlsx") && !ext.endsWith(".csv")) {
+        setUploadError("Sadece .xlsx ve .csv dosyaları desteklenir");
         return;
       }
       setFile(f);
@@ -192,7 +193,7 @@ export default function CandidateImportPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Toplu Aday Yükleme</h1>
-          <p className="mt-1 text-sm text-slate-500">Excel dosyasından aday verilerini içe aktarın</p>
+          <p className="mt-1 text-sm text-slate-500">Excel veya CSV dosyasından aday verilerini içe aktarın</p>
         </div>
         <Link
           href="/candidates"
@@ -233,7 +234,7 @@ export default function CandidateImportPage() {
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-slate-800">Dosya Yükle</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Önce şablonu indirin, doldurun ve tekrar yükleyin. Zorunlu alanlar şablonda * ile işaretlidir.
+              Önce şablonu indirin, doldurun ve tekrar yükleyin. Kariyer.net&apos;ten indirdiğiniz CSV dosyasını da yükleyebilirsiniz.
             </p>
           </div>
 
@@ -263,13 +264,13 @@ export default function CandidateImportPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".xlsx"
+                  accept=".xlsx,.csv"
                   className="hidden"
                   onChange={handleFileChange}
                 />
               </label>
             </p>
-            <p className="mt-1 text-xs text-slate-400">Sadece .xlsx dosyaları, en fazla 5MB</p>
+            <p className="mt-1 text-xs text-slate-400">.xlsx veya .csv dosyaları, en fazla 5MB</p>
           </div>
 
           {file && (

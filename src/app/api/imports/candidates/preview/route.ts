@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { errorResponse, successResponse } from "@/lib/utils";
-import { parseExcelBuffer } from "@/lib/excel";
+import { parseExcelBuffer, parseCSVBuffer } from "@/lib/excel";
 import { importCandidateRowSchema } from "@/lib/validations";
 import {
-  mapExcelRowToCandidate,
+  mapRowToCandidate,
   cleanCandidateData,
   EXPECTED_HEADERS,
+  detectImportFormat,
   ImportRowResult,
 } from "@/lib/import-helpers";
 
@@ -38,9 +39,12 @@ export async function POST(request: NextRequest) {
 
   // Validate file type
   const fileName = file.name.toLowerCase();
-  if (!fileName.endsWith(".xlsx")) {
+  const isCSV = fileName.endsWith(".csv");
+  const isXLSX = fileName.endsWith(".xlsx");
+
+  if (!isCSV && !isXLSX) {
     return NextResponse.json(
-      errorResponse("VALIDATION_ERROR", "Sadece .xlsx dosyaları desteklenir"),
+      errorResponse("VALIDATION_ERROR", "Sadece .xlsx ve .csv dosyaları desteklenir"),
       { status: 400 }
     );
   }
@@ -53,9 +57,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Parse Excel
+  // Parse file (Excel or CSV)
   const buffer = await file.arrayBuffer();
-  const parseResult = await parseExcelBuffer(buffer, EXPECTED_HEADERS);
+  const parseResult = isCSV
+    ? parseCSVBuffer(buffer)
+    : await parseExcelBuffer(buffer, EXPECTED_HEADERS);
+
+  // Detect import format from headers
+  const importFormat = detectImportFormat(parseResult.headers);
+  if (importFormat === "kariyer_net") {
+    parseResult.warnings.push("Kariyer.net formatı algılandı — kolon eşleştirmesi otomatik yapılacak");
+  }
 
   if (parseResult.rows.length === 0) {
     return NextResponse.json(
@@ -68,7 +80,7 @@ export async function POST(request: NextRequest) {
   const rowResults: ImportRowResult[] = [];
 
   for (const parsedRow of parseResult.rows) {
-    const mapped = mapExcelRowToCandidate(parsedRow.data);
+    const mapped = mapRowToCandidate(parsedRow.data, importFormat === "unknown" ? "talentflow" : importFormat);
     const cleaned = cleanCandidateData(mapped);
 
     const validation = importCandidateRowSchema.safeParse(cleaned);

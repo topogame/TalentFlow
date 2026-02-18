@@ -1,5 +1,7 @@
 import {
   mapExcelRowToCandidate,
+  mapRowToCandidate,
+  detectImportFormat,
   parseLanguagesString,
   cleanCandidateData,
   EXPECTED_HEADERS,
@@ -52,6 +54,85 @@ describe("mapExcelRowToCandidate", () => {
   it("returns empty object for empty row", () => {
     const result = mapExcelRowToCandidate({});
     expect(result).toEqual({});
+  });
+});
+
+// ─── detectImportFormat ───
+
+describe("detectImportFormat", () => {
+  it("detects TalentFlow format", () => {
+    const headers = ["Ad", "Soyad", "E-posta", "Telefon", "LinkedIn URL"];
+    expect(detectImportFormat(headers)).toBe("talentflow");
+  });
+
+  it("detects TalentFlow format with asterisk markers", () => {
+    const headers = ["Ad *", "Soyad *", "E-posta", "Telefon"];
+    expect(detectImportFormat(headers)).toBe("talentflow");
+  });
+
+  it("detects Kariyer.net format", () => {
+    const headers = ["İsim", "Soyisim", "E-Posta", "Telefon", "Şehir"];
+    expect(detectImportFormat(headers)).toBe("kariyer_net");
+  });
+
+  it("detects Kariyer.net alternative headers", () => {
+    const headers = ["Ad", "Soyisim", "Email", "Cep Telefonu", "İl"];
+    expect(detectImportFormat(headers)).toBe("kariyer_net");
+  });
+
+  it("returns unknown for unrecognized format", () => {
+    const headers = ["Column1", "Column2", "Column3"];
+    expect(detectImportFormat(headers)).toBe("unknown");
+  });
+
+  it("returns unknown for empty headers", () => {
+    expect(detectImportFormat([])).toBe("unknown");
+  });
+});
+
+// ─── mapRowToCandidate (Kariyer.net) ───
+
+describe("mapRowToCandidate with kariyer_net format", () => {
+  it("maps Kariyer.net headers to field names", () => {
+    const row = {
+      "İsim": "Fatma",
+      "Soyisim": "Kara",
+      "E-Posta": "fatma@test.com",
+      "Telefon": "+90 532 1234567",
+      "Şehir": "Ankara",
+    };
+    const result = mapRowToCandidate(row, "kariyer_net");
+    expect(result).toEqual({
+      firstName: "Fatma",
+      lastName: "Kara",
+      email: "fatma@test.com",
+      phone: "+90 532 1234567",
+      city: "Ankara",
+    });
+  });
+
+  it("maps professional fields from Kariyer.net", () => {
+    const row = {
+      "Pozisyon": "Yazılım Mühendisi",
+      "Sektör": "Teknoloji",
+      "Deneyim Süresi": 5,
+      "Eğitim Durumu": "Lisans",
+      "Üniversite": "ODTÜ",
+      "Bölüm": "Bilgisayar Mühendisliği",
+    };
+    const result = mapRowToCandidate(row, "kariyer_net");
+    expect(result.currentTitle).toBe("Yazılım Mühendisi");
+    expect(result.currentSector).toBe("Teknoloji");
+    expect(result.totalExperienceYears).toBe(5);
+    expect(result.educationLevel).toBe("Lisans");
+    expect(result.universityName).toBe("ODTÜ");
+    expect(result.universityDepartment).toBe("Bilgisayar Mühendisliği");
+  });
+
+  it("ignores unknown Kariyer.net headers", () => {
+    const row = { "İsim": "Test", "Başvuru Tarihi": "2026-01-01" };
+    const result = mapRowToCandidate(row, "kariyer_net");
+    expect(result).toEqual({ firstName: "Test" });
   });
 });
 

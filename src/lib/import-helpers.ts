@@ -44,20 +44,80 @@ const HEADER_TO_FIELD: Record<string, string> = {
 
 export const EXPECTED_HEADERS = Object.keys(HEADER_TO_FIELD);
 
-export function mapExcelRowToCandidate(
-  row: Record<string, unknown>
+// Kariyer.net CSV header mapping
+const KARIYER_NET_HEADER_TO_FIELD: Record<string, string> = {
+  "İsim": "firstName",
+  "Ad": "firstName",
+  "Soyisim": "lastName",
+  "Soyad": "lastName",
+  "E-Posta": "email",
+  "E-posta": "email",
+  "Email": "email",
+  "Telefon": "phone",
+  "Telefon No": "phone",
+  "Cep Telefonu": "phone",
+  "Şehir": "city",
+  "İl": "city",
+  "Ülke": "country",
+  "Pozisyon": "currentTitle",
+  "Mevcut Pozisyon": "currentTitle",
+  "Başvurulan Pozisyon": "currentTitle",
+  "Unvan": "currentTitle",
+  "Sektör": "currentSector",
+  "Deneyim Süresi": "totalExperienceYears",
+  "Deneyim (Yıl)": "totalExperienceYears",
+  "Toplam Deneyim": "totalExperienceYears",
+  "Eğitim Durumu": "educationLevel",
+  "Eğitim Seviyesi": "educationLevel",
+  "Üniversite": "universityName",
+  "Okul": "universityName",
+  "Bölüm": "universityDepartment",
+  "LinkedIn": "linkedinUrl",
+  "LinkedIn URL": "linkedinUrl",
+  "Diller": "languages",
+  "Yabancı Dil": "languages",
+};
+
+export type ImportFormat = "talentflow" | "kariyer_net" | "unknown";
+
+export function detectImportFormat(headers: string[]): ImportFormat {
+  const clean = headers.map((h) => h.replace(/\s*\*\s*$/, "").trim());
+
+  // TalentFlow: check for our specific headers
+  const tfHeaders = Object.keys(HEADER_TO_FIELD);
+  const tfMatches = clean.filter((h) => tfHeaders.includes(h)).length;
+  if (tfMatches >= 3) return "talentflow";
+
+  // Kariyer.net: check for known Kariyer.net headers
+  const knHeaders = Object.keys(KARIYER_NET_HEADER_TO_FIELD);
+  const knMatches = clean.filter((h) => knHeaders.includes(h)).length;
+  if (knMatches >= 3) return "kariyer_net";
+
+  return "unknown";
+}
+
+export function mapRowToCandidate(
+  row: Record<string, unknown>,
+  format: ImportFormat
 ): Record<string, unknown> {
+  const mapping = format === "kariyer_net" ? KARIYER_NET_HEADER_TO_FIELD : HEADER_TO_FIELD;
   const mapped: Record<string, unknown> = {};
 
   for (const [header, value] of Object.entries(row)) {
     const cleanHeader = header.replace(/\s*\*\s*$/, "").trim();
-    const fieldName = HEADER_TO_FIELD[cleanHeader];
+    const fieldName = mapping[cleanHeader];
     if (fieldName) {
       mapped[fieldName] = value;
     }
   }
 
   return mapped;
+}
+
+export function mapExcelRowToCandidate(
+  row: Record<string, unknown>
+): Record<string, unknown> {
+  return mapRowToCandidate(row, "talentflow");
 }
 
 // ─── Language Parsing ───

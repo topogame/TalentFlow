@@ -1,4 +1,12 @@
-import { extractJSON, CV_EXTRACTION_PROMPT, type CVParseResult } from "./ai";
+import {
+  extractJSON,
+  extractJobJSON,
+  CV_EXTRACTION_PROMPT,
+  LINKEDIN_EXTRACTION_PROMPT,
+  JOB_POSTING_EXTRACTION_PROMPT,
+  type CVParseResult,
+  type JobPostingParseResult,
+} from "./ai";
 
 // ─── extractJSON ───
 
@@ -174,5 +182,132 @@ describe("CV_EXTRACTION_PROMPT", () => {
 
   it("instructs to return only JSON", () => {
     expect(CV_EXTRACTION_PROMPT).toContain("SADECE JSON");
+  });
+});
+
+// ─── LINKEDIN_EXTRACTION_PROMPT ───
+
+describe("LINKEDIN_EXTRACTION_PROMPT", () => {
+  it("is defined and non-empty", () => {
+    expect(LINKEDIN_EXTRACTION_PROMPT).toBeTruthy();
+    expect(LINKEDIN_EXTRACTION_PROMPT.length).toBeGreaterThan(100);
+  });
+
+  it("mentions LinkedIn-specific terms", () => {
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("LinkedIn");
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("Deneyim");
+  });
+
+  it("uses same JSON format as CV prompt", () => {
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("firstName");
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("lastName");
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("languages");
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("currentTitle");
+  });
+
+  it("mentions education levels", () => {
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("Lisans");
+    expect(LINKEDIN_EXTRACTION_PROMPT).toContain("Yüksek Lisans");
+  });
+});
+
+// ─── extractJobJSON ───
+
+describe("extractJobJSON", () => {
+  it("extracts job posting JSON from code fence", () => {
+    const text = '```json\n{"title": "Frontend Developer", "department": "Engineering"}\n```';
+    const result = extractJobJSON(text);
+    expect(result.title).toBe("Frontend Developer");
+    expect(result.department).toBe("Engineering");
+  });
+
+  it("extracts JSON from plain text", () => {
+    const text = '{"title": "Backend Developer", "city": "İstanbul", "workModel": "remote"}';
+    const result = extractJobJSON(text);
+    expect(result.title).toBe("Backend Developer");
+    expect(result.city).toBe("İstanbul");
+    expect(result.workModel).toBe("remote");
+  });
+
+  it("returns default structure on invalid JSON", () => {
+    const result = extractJobJSON("Bu bir JSON değil");
+    expect(result.title).toBeNull();
+    expect(result.department).toBeNull();
+    expect(result.workModel).toBeNull();
+  });
+
+  it("returns default structure on empty string", () => {
+    const result = extractJobJSON("");
+    expect(result.title).toBeNull();
+    expect(result.salaryMin).toBeNull();
+  });
+
+  it("handles all position fields correctly", () => {
+    const fullData: JobPostingParseResult = {
+      title: "Full Stack Developer",
+      department: "IT",
+      minExperienceYears: 5,
+      salaryMin: 40000,
+      salaryMax: 60000,
+      salaryCurrency: "TRY",
+      workModel: "hybrid",
+      city: "Ankara",
+      country: "Türkiye",
+      description: "Pozisyon açıklaması",
+      requirements: "5 yıl deneyim gerekli",
+      requiredSkills: "React, TypeScript, Node.js",
+      sectorPreference: "Teknoloji",
+      educationRequirement: "Lisans",
+      languageRequirement: "İngilizce (İleri)",
+    };
+    const text = JSON.stringify(fullData);
+    const result = extractJobJSON(text);
+    expect(result).toEqual(fullData);
+  });
+
+  it("handles partial JSON with missing fields", () => {
+    const text = '{"title": "Data Engineer", "minExperienceYears": 3}';
+    const result = extractJobJSON(text);
+    expect(result.title).toBe("Data Engineer");
+    expect(result.minExperienceYears).toBe(3);
+    expect(result.department).toBeNull();
+    expect(result.workModel).toBeNull();
+  });
+
+  it("handles null values", () => {
+    const text = JSON.stringify({
+      title: null,
+      salaryMin: null,
+      city: null,
+    });
+    const result = extractJobJSON(text);
+    expect(result.title).toBeNull();
+    expect(result.salaryMin).toBeNull();
+    expect(result.city).toBeNull();
+  });
+});
+
+// ─── JOB_POSTING_EXTRACTION_PROMPT ───
+
+describe("JOB_POSTING_EXTRACTION_PROMPT", () => {
+  it("is defined and non-empty", () => {
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toBeTruthy();
+    expect(JOB_POSTING_EXTRACTION_PROMPT.length).toBeGreaterThan(100);
+  });
+
+  it("mentions position fields", () => {
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("title");
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("workModel");
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("requiredSkills");
+  });
+
+  it("mentions valid workModel values", () => {
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("office");
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("remote");
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("hybrid");
+  });
+
+  it("instructs to return only JSON", () => {
+    expect(JOB_POSTING_EXTRACTION_PROMPT).toContain("SADECE JSON");
   });
 });

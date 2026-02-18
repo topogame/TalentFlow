@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import CVUpload from "@/components/cv-upload";
+import LinkedInPaste from "@/components/linkedin-paste";
 import type { CVParseResult } from "@/lib/ai";
 
 type LanguageEntry = { language: string; level: string };
@@ -178,13 +179,14 @@ export default function NewCandidatePage() {
         <div className="mb-6 rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>
       )}
 
-      {/* CV Upload Section */}
-      <div className="mb-6">
+      {/* AI Quick-Fill Section */}
+      <div className="mb-6 space-y-3">
         <CVUpload
           onParsed={handleCVParsed}
           onFileUploaded={(f) => setCvFileInfo(f)}
           disabled={saving}
         />
+        <LinkedInPaste onParsed={handleCVParsed} disabled={saving} />
       </div>
 
       {aiParsed && (

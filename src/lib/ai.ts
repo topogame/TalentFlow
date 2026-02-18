@@ -102,6 +102,181 @@ export function extractJSON(text: string): CVParseResult {
   return cvParseResultSchema.parse({});
 }
 
+// ─── LinkedIn Profile Parse ───
+
+export const LINKEDIN_EXTRACTION_PROMPT = `Sen bir LinkedIn profil analiz asistanısın. Aşağıdaki LinkedIn profil metnini analiz ederek belirtilen JSON formatında bilgileri çıkar.
+
+KURALLAR:
+- Sadece profil metninde açıkça belirtilen bilgileri çıkar
+- Bulamadıkların için null döndür
+- "Deneyim" bölümündeki pozisyonların tarihlerinden toplam deneyim yılını hesapla (tam sayı)
+- En güncel pozisyonu currentTitle olarak al
+- En güncel şirketin sektörünü currentSector olarak al
+- educationLevel değerleri: "Lise", "Ön Lisans", "Lisans", "Yüksek Lisans", "Doktora" (sadece bunlar)
+- Dil seviyeleri: "beginner", "intermediate", "advanced", "native" (sadece bunlar)
+- LinkedIn profil URL'sini linkedinUrl olarak al (varsa)
+- salaryCurrency: "TRY", "USD", "EUR" (sadece bunlar, bulunamazsa null)
+- Türkçe karakterler doğru kullanılmalı (ö, ü, ş, ç, ğ, ı, İ)
+- Yanıtı SADECE JSON olarak döndür, başka bir şey ekleme
+
+JSON FORMATI:
+{
+  "firstName": string | null,
+  "lastName": string | null,
+  "email": string | null,
+  "phone": string | null,
+  "linkedinUrl": string | null,
+  "educationLevel": string | null,
+  "universityName": string | null,
+  "universityDepartment": string | null,
+  "totalExperienceYears": number | null,
+  "currentSector": string | null,
+  "currentTitle": string | null,
+  "salaryExpectation": number | null,
+  "salaryCurrency": string | null,
+  "country": string | null,
+  "city": string | null,
+  "languages": [{ "language": string, "level": "beginner" | "intermediate" | "advanced" | "native" }]
+}`;
+
+export async function parseLinkedInProfile(
+  text: string
+): Promise<{ success: true; data: CVParseResult } | { success: false; error: string }> {
+  try {
+    const response = await getAnthropic().messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2000,
+      messages: [
+        {
+          role: "user",
+          content: `${LINKEDIN_EXTRACTION_PROMPT}\n\n--- LİNKEDIN PROFİL ---\n${text}`,
+        },
+      ],
+    });
+
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      return { success: false, error: "AI yanıt vermedi" };
+    }
+
+    const data = extractJSON(textBlock.text);
+    return { success: true, data };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "AI analiz hatası",
+    };
+  }
+}
+
+// ─── Job Posting Parse ───
+
+const jobPostingParseResultSchema = z.object({
+  title: z.string().nullable().default(null),
+  department: z.string().nullable().default(null),
+  minExperienceYears: z.number().nullable().default(null),
+  salaryMin: z.number().nullable().default(null),
+  salaryMax: z.number().nullable().default(null),
+  salaryCurrency: z.string().nullable().default(null),
+  workModel: z.string().nullable().default(null),
+  city: z.string().nullable().default(null),
+  country: z.string().nullable().default(null),
+  description: z.string().nullable().default(null),
+  requirements: z.string().nullable().default(null),
+  requiredSkills: z.string().nullable().default(null),
+  sectorPreference: z.string().nullable().default(null),
+  educationRequirement: z.string().nullable().default(null),
+  languageRequirement: z.string().nullable().default(null),
+});
+
+export type JobPostingParseResult = z.infer<typeof jobPostingParseResultSchema>;
+
+export const JOB_POSTING_EXTRACTION_PROMPT = `Sen bir iş ilanı analiz asistanısın. Aşağıdaki iş ilanı metnini analiz ederek belirtilen JSON formatında bilgileri çıkar.
+
+KURALLAR:
+- Sadece ilanda açıkça belirtilen bilgileri çıkar
+- Bulamadıkların için null döndür
+- workModel: "office", "remote", "hybrid" (sadece bunlar; uzaktan/evden çalışma → "remote", hibrit → "hybrid", ofis → "office")
+- salaryCurrency: "TRY", "USD", "EUR" (sadece bunlar)
+- requiredSkills: virgülle ayrılmış beceri listesi (ör. "React, TypeScript, Node.js")
+- description: pozisyon açıklaması ve sorumluluklar (kısa özet)
+- requirements: aranan nitelikler ve gereksinimler (kısa özet)
+- educationRequirement: "Lise", "Ön Lisans", "Lisans", "Yüksek Lisans", "Doktora" (sadece bunlar)
+- languageRequirement: "Dil (Seviye)" formatında (ör. "İngilizce (İleri), Almanca (Orta)")
+- Türkçe karakterler doğru kullanılmalı (ö, ü, ş, ç, ğ, ı, İ)
+- Yanıtı SADECE JSON olarak döndür, başka bir şey ekleme
+
+JSON FORMATI:
+{
+  "title": string | null,
+  "department": string | null,
+  "minExperienceYears": number | null,
+  "salaryMin": number | null,
+  "salaryMax": number | null,
+  "salaryCurrency": string | null,
+  "workModel": string | null,
+  "city": string | null,
+  "country": string | null,
+  "description": string | null,
+  "requirements": string | null,
+  "requiredSkills": string | null,
+  "sectorPreference": string | null,
+  "educationRequirement": string | null,
+  "languageRequirement": string | null
+}`;
+
+export function extractJobJSON(text: string): JobPostingParseResult {
+  const fenceMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+  if (fenceMatch) {
+    try {
+      const parsed = JSON.parse(fenceMatch[1].trim());
+      return jobPostingParseResultSchema.parse(parsed);
+    } catch {
+      // Fall through
+    }
+  }
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return jobPostingParseResultSchema.parse(parsed);
+    } catch {
+      // Fall through
+    }
+  }
+  return jobPostingParseResultSchema.parse({});
+}
+
+export async function parseJobPosting(
+  text: string
+): Promise<{ success: true; data: JobPostingParseResult } | { success: false; error: string }> {
+  try {
+    const response = await getAnthropic().messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2000,
+      messages: [
+        {
+          role: "user",
+          content: `${JOB_POSTING_EXTRACTION_PROMPT}\n\n--- İŞ İLANI ---\n${text}`,
+        },
+      ],
+    });
+
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      return { success: false, error: "AI yanıt vermedi" };
+    }
+
+    const data = extractJobJSON(textBlock.text);
+    return { success: true, data };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "AI analiz hatası",
+    };
+  }
+}
+
 // ─── Match Types ───
 
 export type MatchCategory = {

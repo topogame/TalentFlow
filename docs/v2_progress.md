@@ -1,6 +1,6 @@
 # TalentFlow v2 — İlerleme Özeti
 
-**Son güncelleme:** 2026-02-18
+**Son güncelleme:** 2026-02-19
 
 ---
 
@@ -70,15 +70,26 @@
 - 21 yeni test eklendi (toplam: 471)
 - **Detay:** [candidate_portal_test.md](candidate_portal_test.md)
 
+### 7. LinkedIn / Kariyer.net Entegrasyonu
+**Durum:** Tamamlandı | **Commit:** (bekliyor)
+
+- **LinkedIn Profil Yapıştır:** Aday formunda LinkedIn profil metnini yapıştır → AI analiz → form otomatik doldur
+- **Kariyer.net CSV Import:** CSV dosya desteği + Kariyer.net header mapping + otomatik format algılama
+- **İlan Metni Yapıştır:** Pozisyon formunda iş ilanı metnini yapıştır → AI analiz → form otomatik doldur
+- Pozisyon formu uncontrolled → controlled state dönüşümü (AI pre-fill desteği)
+- 2 yeni API endpoint: `/api/parse-linkedin`, `/api/parse-job-posting`
+- 2 yeni bileşen: `LinkedInPaste`, `JobPostingPaste`
+- 24 yeni test eklendi (toplam: 495)
+- **Detay:** [linkedin_kariyernet_test.md](linkedin_kariyernet_test.md)
+
 ---
 
 ## Kalan Özellikler
 
 | # | Özellik | Öncelik | Açıklama | Durum |
 |---|---------|---------|----------|-------|
-| 1 | **LinkedIn / Kariyer.net Entegrasyonu** | Orta | Tek tıkla profil aktarma, otomatik başvuru senkronizasyonu | Bekliyor |
-| 2 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
-| 3 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
+| 1 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
+| 2 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
 
 ---
 
@@ -86,12 +97,12 @@
 
 | Metrik | Değer |
 |--------|-------|
-| **Tamamlanan özellik** | 6 / 9 |
-| **Toplam test** | 471 |
+| **Tamamlanan özellik** | 7 / 9 |
+| **Toplam test** | 495 |
 | **Test dosyası** | 13 |
-| **API route** | 66 |
+| **API route** | 68 |
 | **Build** | Başarılı (Next.js 16.1.6, Turbopack) |
-| **Son commit** | (bekliyor) — Candidate Portal |
+| **Son commit** | (bekliyor) — LinkedIn/Kariyer.net Entegrasyonu |
 | **Branch** | `master` |
 
 ---

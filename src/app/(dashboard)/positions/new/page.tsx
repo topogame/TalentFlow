@@ -2,6 +2,8 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import JobPostingPaste from "@/components/job-posting-paste";
+import type { JobPostingParseResult } from "@/lib/ai";
 
 type FirmOption = { id: string; name: string };
 
@@ -20,6 +22,52 @@ function NewPositionForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [firms, setFirms] = useState<FirmOption[]>([]);
+  const [aiParsed, setAiParsed] = useState(false);
+
+  // Controlled fields for AI pre-fill
+  const [fields, setFields] = useState({
+    firmId: preselectedFirmId,
+    title: "",
+    department: "",
+    priority: "normal",
+    minExperienceYears: "",
+    workModel: "",
+    city: "",
+    sectorPreference: "",
+    educationRequirement: "",
+    languageRequirement: "",
+    requiredSkills: "",
+    salaryMin: "",
+    salaryMax: "",
+    salaryCurrency: "TRY",
+    description: "",
+    requirements: "",
+  });
+
+  function updateField(name: string, value: string) {
+    setFields((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function handleJobParsed(data: JobPostingParseResult) {
+    setFields((prev) => ({
+      ...prev,
+      title: data.title || prev.title,
+      department: data.department || prev.department,
+      minExperienceYears: data.minExperienceYears != null ? String(data.minExperienceYears) : prev.minExperienceYears,
+      workModel: data.workModel || prev.workModel,
+      city: data.city || prev.city,
+      sectorPreference: data.sectorPreference || prev.sectorPreference,
+      educationRequirement: data.educationRequirement || prev.educationRequirement,
+      languageRequirement: data.languageRequirement || prev.languageRequirement,
+      requiredSkills: data.requiredSkills || prev.requiredSkills,
+      salaryMin: data.salaryMin != null ? String(data.salaryMin) : prev.salaryMin,
+      salaryMax: data.salaryMax != null ? String(data.salaryMax) : prev.salaryMax,
+      salaryCurrency: data.salaryCurrency || prev.salaryCurrency,
+      description: data.description || prev.description,
+      requirements: data.requirements || prev.requirements,
+    }));
+    setAiParsed(true);
+  }
 
   useEffect(() => {
     fetch("/api/firms?limit=100")
@@ -29,6 +77,13 @@ function NewPositionForm() {
       });
   }, []);
 
+  // Sync firmId when preselectedFirmId is available after initial render
+  useEffect(() => {
+    if (preselectedFirmId) {
+      setFields((prev) => ({ ...prev, firmId: preselectedFirmId }));
+    }
+  }, [preselectedFirmId]);
+
   const inputClass =
     "mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
@@ -37,27 +92,24 @@ function NewPositionForm() {
     setError("");
     setSaving(true);
 
-    const formData = new FormData(e.currentTarget);
     const body = {
-      firmId: formData.get("firmId"),
-      title: formData.get("title"),
-      department: formData.get("department") || undefined,
-      minExperienceYears: formData.get("minExperienceYears")
-        ? Number(formData.get("minExperienceYears"))
-        : undefined,
-      salaryMin: formData.get("salaryMin") ? Number(formData.get("salaryMin")) : undefined,
-      salaryMax: formData.get("salaryMax") ? Number(formData.get("salaryMax")) : undefined,
-      salaryCurrency: formData.get("salaryCurrency") || undefined,
-      workModel: formData.get("workModel") || undefined,
-      city: formData.get("city") || undefined,
-      country: formData.get("country") || undefined,
-      description: formData.get("description") || undefined,
-      requirements: formData.get("requirements") || undefined,
-      requiredSkills: formData.get("requiredSkills") || undefined,
-      sectorPreference: formData.get("sectorPreference") || undefined,
-      educationRequirement: formData.get("educationRequirement") || undefined,
-      languageRequirement: formData.get("languageRequirement") || undefined,
-      priority: formData.get("priority") || "normal",
+      firmId: fields.firmId,
+      title: fields.title,
+      department: fields.department || undefined,
+      minExperienceYears: fields.minExperienceYears ? Number(fields.minExperienceYears) : undefined,
+      salaryMin: fields.salaryMin ? Number(fields.salaryMin) : undefined,
+      salaryMax: fields.salaryMax ? Number(fields.salaryMax) : undefined,
+      salaryCurrency: fields.salaryCurrency || undefined,
+      workModel: fields.workModel || undefined,
+      city: fields.city || undefined,
+      country: undefined,
+      description: fields.description || undefined,
+      requirements: fields.requirements || undefined,
+      requiredSkills: fields.requiredSkills || undefined,
+      sectorPreference: fields.sectorPreference || undefined,
+      educationRequirement: fields.educationRequirement || undefined,
+      languageRequirement: fields.languageRequirement || undefined,
+      priority: fields.priority || "normal",
     };
 
     try {
@@ -88,6 +140,20 @@ function NewPositionForm() {
         <div className="mb-6 rounded-lg bg-rose-50 p-4 text-sm text-rose-600">{error}</div>
       )}
 
+      {/* AI Quick-Fill */}
+      <div className="mb-6">
+        <JobPostingPaste onParsed={handleJobParsed} disabled={saving} />
+      </div>
+
+      {aiParsed && (
+        <div className="mb-6 flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+          <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
+          </svg>
+          AI tarafından doldurulan alanları kontrol edin ve gerekirse düzeltin
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
@@ -101,7 +167,7 @@ function NewPositionForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Firma *</label>
-              <select name="firmId" required defaultValue={preselectedFirmId} className={inputClass}>
+              <select name="firmId" required value={fields.firmId} onChange={(e) => updateField("firmId", e.target.value)} className={inputClass}>
                 <option value="">Firma seçin</option>
                 {firms.map((f) => (
                   <option key={f.id} value={f.id}>
@@ -112,15 +178,15 @@ function NewPositionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Pozisyon Başlığı *</label>
-              <input name="title" type="text" required className={inputClass} />
+              <input name="title" type="text" required value={fields.title} onChange={(e) => updateField("title", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Departman</label>
-              <input name="department" type="text" className={inputClass} />
+              <input name="department" type="text" value={fields.department} onChange={(e) => updateField("department", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Öncelik</label>
-              <select name="priority" defaultValue="normal" className={inputClass}>
+              <select name="priority" value={fields.priority} onChange={(e) => updateField("priority", e.target.value)} className={inputClass}>
                 <option value="low">Düşük</option>
                 <option value="normal">Normal</option>
                 <option value="high">Yüksek</option>
@@ -129,11 +195,11 @@ function NewPositionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Gerekli Deneyim (Yıl)</label>
-              <input name="minExperienceYears" type="number" min="0" max="50" className={inputClass} />
+              <input name="minExperienceYears" type="number" min="0" max="50" value={fields.minExperienceYears} onChange={(e) => updateField("minExperienceYears", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Çalışma Modeli</label>
-              <select name="workModel" className={inputClass}>
+              <select name="workModel" value={fields.workModel} onChange={(e) => updateField("workModel", e.target.value)} className={inputClass}>
                 <option value="">Seçiniz</option>
                 <option value="office">Ofis</option>
                 <option value="remote">Uzaktan</option>
@@ -142,23 +208,23 @@ function NewPositionForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Şehir</label>
-              <input name="city" type="text" className={inputClass} />
+              <input name="city" type="text" value={fields.city} onChange={(e) => updateField("city", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Sektör Tercihi</label>
-              <input name="sectorPreference" type="text" className={inputClass} placeholder="ör. Teknoloji, Finans" />
+              <input name="sectorPreference" type="text" value={fields.sectorPreference} onChange={(e) => updateField("sectorPreference", e.target.value)} className={inputClass} placeholder="ör. Teknoloji, Finans" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Eğitim Gereksinimi</label>
-              <input name="educationRequirement" type="text" className={inputClass} placeholder="ör. Lisans" />
+              <input name="educationRequirement" type="text" value={fields.educationRequirement} onChange={(e) => updateField("educationRequirement", e.target.value)} className={inputClass} placeholder="ör. Lisans" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Dil Gereksinimi</label>
-              <input name="languageRequirement" type="text" className={inputClass} placeholder="ör. İngilizce (İleri), Almanca (Orta)" />
+              <input name="languageRequirement" type="text" value={fields.languageRequirement} onChange={(e) => updateField("languageRequirement", e.target.value)} className={inputClass} placeholder="ör. İngilizce (İleri), Almanca (Orta)" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-slate-700">Gerekli Beceriler</label>
-              <textarea name="requiredSkills" rows={3} className={inputClass} placeholder="ör. React, TypeScript, Node.js, SQL" />
+              <textarea name="requiredSkills" rows={3} value={fields.requiredSkills} onChange={(e) => updateField("requiredSkills", e.target.value)} className={inputClass} placeholder="ör. React, TypeScript, Node.js, SQL" />
             </div>
           </div>
         </div>
@@ -175,15 +241,15 @@ function NewPositionForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="block text-sm font-medium text-slate-700">Minimum</label>
-              <input name="salaryMin" type="number" min="0" className={inputClass} />
+              <input name="salaryMin" type="number" min="0" value={fields.salaryMin} onChange={(e) => updateField("salaryMin", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Maksimum</label>
-              <input name="salaryMax" type="number" min="0" className={inputClass} />
+              <input name="salaryMax" type="number" min="0" value={fields.salaryMax} onChange={(e) => updateField("salaryMax", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Para Birimi</label>
-              <select name="salaryCurrency" defaultValue="TRY" className={inputClass}>
+              <select name="salaryCurrency" value={fields.salaryCurrency} onChange={(e) => updateField("salaryCurrency", e.target.value)} className={inputClass}>
                 <option value="TRY">TRY</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
@@ -204,11 +270,11 @@ function NewPositionForm() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700">Açıklama</label>
-              <textarea name="description" rows={4} className={inputClass} />
+              <textarea name="description" rows={4} value={fields.description} onChange={(e) => updateField("description", e.target.value)} className={inputClass} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Gereksinimler</label>
-              <textarea name="requirements" rows={4} className={inputClass} />
+              <textarea name="requirements" rows={4} value={fields.requirements} onChange={(e) => updateField("requirements", e.target.value)} className={inputClass} />
             </div>
           </div>
         </div>

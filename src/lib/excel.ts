@@ -191,6 +191,119 @@ function coerceValue(raw: string): unknown {
   return raw;
 }
 
+// ─── CSV Parsing ───
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++; // skip escaped quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === "," || ch === ";") {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += ch;
+      }
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+export function parseCSVBuffer(
+  buffer: Buffer | ArrayBuffer,
+  expectedHeaders?: string[]
+): ExcelParseResult {
+  const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+  let text: string;
+
+  // Try UTF-8 first, then fallback
+  const decoder = new TextDecoder("utf-8");
+  text = decoder.decode(bytes);
+
+  // Remove BOM if present
+  if (text.charCodeAt(0) === 0xfeff) {
+    text = text.slice(1);
+  }
+
+  const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
+
+  if (lines.length === 0) {
+    return { rows: [], headers: [], totalRows: 0, warnings: ["CSV dosyası boş."] };
+  }
+
+  const warnings: string[] = [];
+
+  // Extract headers from first line
+  const headerCells = parseCSVLine(lines[0]);
+  const headers = headerCells.map((h) => h.replace(/\s*\*\s*$/, "").trim()).filter(Boolean);
+
+  if (headers.length === 0) {
+    return { rows: [], headers: [], totalRows: 0, warnings: ["Başlık satırı boş."] };
+  }
+
+  // Validate expected headers
+  if (expectedHeaders) {
+    const missing = expectedHeaders.filter((h) => !headers.includes(h));
+    if (missing.length > 0) {
+      warnings.push(`Eksik sütunlar: ${missing.join(", ")}`);
+    }
+  }
+
+  // Parse data rows
+  const rows: ParsedRow[] = [];
+
+  for (let i = 1; i < lines.length && rows.length < MAX_IMPORT_ROWS; i++) {
+    const cells = parseCSVLine(lines[i]);
+    const data: Record<string, unknown> = {};
+    const rawValues: Record<string, string> = {};
+    let hasAnyValue = false;
+
+    for (let j = 0; j < headers.length && j < cells.length; j++) {
+      const header = headers[j];
+      const raw = cells[j];
+
+      if (raw !== "") {
+        hasAnyValue = true;
+        rawValues[header] = raw;
+        // Basic coercion
+        const lower = raw.toLowerCase();
+        if (lower === "true" || lower === "evet") data[header] = true;
+        else if (lower === "false" || lower === "hayır" || lower === "hayir") data[header] = false;
+        else if (/^-?\d+(\.\d+)?$/.test(raw)) data[header] = Number(raw);
+        else data[header] = raw;
+      }
+    }
+
+    if (hasAnyValue) {
+      rows.push({ rowNumber: i + 1, data, rawValues });
+    }
+  }
+
+  if (lines.length - 1 > MAX_IMPORT_ROWS) {
+    warnings.push(`Dosyada ${lines.length - 1} satır var, en fazla ${MAX_IMPORT_ROWS} satır işlenebilir.`);
+  }
+
+  return { rows, headers, totalRows: rows.length, warnings };
+}
+
 export async function parseExcelBuffer(
   buffer: Buffer | ArrayBuffer,
   expectedHeaders?: string[]
