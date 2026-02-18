@@ -232,25 +232,32 @@ export const createInterviewSchema = z
       message: "Geçerli bir mülakat tipi seçin",
     }),
     durationMinutes: z.coerce.number().int().min(15).max(480).optional().default(60),
+    meetingProvider: z.enum(["zoom", "teams"]).optional().nullable(),
     meetingLink: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")),
     location: z.string().max(500).optional().or(z.literal("")),
     clientParticipants: z.string().max(1000).optional().or(z.literal("")),
     notes: z.string().max(5000).optional().or(z.literal("")),
+    sendInviteEmail: z.boolean().optional().default(false),
   })
   .refine(
     (data) => {
-      if (data.type === "online" && (!data.meetingLink || data.meetingLink === "")) {
+      if (
+        data.type === "online" &&
+        !data.meetingProvider &&
+        (!data.meetingLink || data.meetingLink === "")
+      ) {
         return false;
       }
       return true;
     },
-    { message: "Online mülakat için toplantı linki gerekli", path: ["meetingLink"] }
+    { message: "Online mülakat için toplantı linki veya sağlayıcı seçimi gerekli", path: ["meetingLink"] }
   );
 
 export const updateInterviewSchema = z.object({
   scheduledAt: z.coerce.date().optional(),
   type: z.enum(["face_to_face", "online", "phone"]).optional(),
   durationMinutes: z.coerce.number().int().min(15).max(480).optional(),
+  meetingProvider: z.enum(["zoom", "teams"]).optional().nullable(),
   meetingLink: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")),
   location: z.string().max(500).optional().or(z.literal("")),
   clientParticipants: z.string().max(1000).optional().or(z.literal("")),

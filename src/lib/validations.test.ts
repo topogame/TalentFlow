@@ -674,7 +674,7 @@ describe("createInterviewSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires meetingLink for online type", () => {
+  it("rejects online with neither provider nor link", () => {
     const result = createInterviewSchema.safeParse({ ...validInterview, type: "online" });
     expect(result.success).toBe(false);
   });
@@ -686,6 +686,50 @@ describe("createInterviewSchema", () => {
       meetingLink: "https://meet.google.com/abc",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts online with meetingProvider instead of meetingLink", () => {
+    const result = createInterviewSchema.safeParse({
+      ...validInterview,
+      type: "online",
+      meetingProvider: "zoom",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts online with meetingProvider teams", () => {
+    const result = createInterviewSchema.safeParse({
+      ...validInterview,
+      type: "online",
+      meetingProvider: "teams",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid meetingProvider value", () => {
+    const result = createInterviewSchema.safeParse({
+      ...validInterview,
+      type: "online",
+      meetingProvider: "google_meet",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts sendInviteEmail boolean", () => {
+    const result = createInterviewSchema.safeParse({
+      ...validInterview,
+      type: "online",
+      meetingProvider: "zoom",
+      sendInviteEmail: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sendInviteEmail).toBe(true);
+  });
+
+  it("defaults sendInviteEmail to false", () => {
+    const result = createInterviewSchema.safeParse(validInterview);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.sendInviteEmail).toBe(false);
   });
 
   it("rejects duration below 15", () => {
@@ -719,6 +763,16 @@ describe("updateInterviewSchema", () => {
   it("rejects invalid meetingLink", () => {
     const result = updateInterviewSchema.safeParse({ meetingLink: "not-a-url" });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts meetingProvider in update", () => {
+    const result = updateInterviewSchema.safeParse({ meetingProvider: "zoom" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null meetingProvider in update", () => {
+    const result = updateInterviewSchema.safeParse({ meetingProvider: null });
+    expect(result.success).toBe(true);
   });
 });
 

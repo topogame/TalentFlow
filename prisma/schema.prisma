@@ -373,6 +373,8 @@ model Interview {
   durationMinutes   Int           @default(60) @map("duration_minutes")
   type              InterviewType
   meetingLink       String?       @map("meeting_link") @db.VarChar(500)
+  meetingProvider   String?       @map("meeting_provider") @db.VarChar(20)
+  meetingId         String?       @map("meeting_id") @db.VarChar(500)
   location          String?       @db.VarChar(500)
   clientParticipants String?      @map("client_participants") @db.Text
   notes             String?       @db.Text

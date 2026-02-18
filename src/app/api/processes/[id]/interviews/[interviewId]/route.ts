@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { successResponse, errorResponse } from "@/lib/utils";
 import { updateInterviewSchema } from "@/lib/validations";
+import { deleteMeeting, type MeetingProvider } from "@/lib/meeting";
 
 type RouteParams = { params: Promise<{ id: string; interviewId: string }> };
 
@@ -50,6 +51,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       durationMinutes: true,
       type: true,
       meetingLink: true,
+      meetingProvider: true,
+      meetingId: true,
       location: true,
       clientParticipants: true,
       notes: true,
@@ -77,6 +80,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   });
   if (!interview) {
     return NextResponse.json(errorResponse("NOT_FOUND", "Mülakat bulunamadı"), { status: 404 });
+  }
+
+  // Best-effort: cancel external meeting if provider was used
+  if (interview.meetingProvider && interview.meetingId) {
+    await deleteMeeting(
+      interview.meetingProvider as MeetingProvider,
+      interview.meetingId
+    );
   }
 
   await prisma.interview.delete({ where: { id: interviewId } });

@@ -483,6 +483,55 @@ describe("Database Integration", () => {
       });
       expect(interviews.length).toBeGreaterThanOrEqual(1);
     });
+
+    it("creates interview with meetingProvider and meetingId", async () => {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 14);
+
+      const interview = await prisma.interview.create({
+        data: {
+          processId,
+          scheduledAt: nextWeek,
+          type: "online",
+          durationMinutes: 60,
+          meetingProvider: "zoom",
+          meetingId: "zoom-test-123456",
+          meetingLink: "https://zoom.us/j/123456",
+          createdById: testUserId,
+        },
+      });
+
+      expect(interview.meetingProvider).toBe("zoom");
+      expect(interview.meetingId).toBe("zoom-test-123456");
+      expect(interview.meetingLink).toBe("https://zoom.us/j/123456");
+    });
+
+    it("allows null meetingProvider for manual link entry", async () => {
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 15);
+
+      const interview = await prisma.interview.create({
+        data: {
+          processId,
+          scheduledAt: nextWeek,
+          type: "online",
+          meetingLink: "https://meet.google.com/abc-def",
+          createdById: testUserId,
+        },
+      });
+
+      expect(interview.meetingProvider).toBeNull();
+      expect(interview.meetingId).toBeNull();
+      expect(interview.meetingLink).toBe("https://meet.google.com/abc-def");
+    });
+
+    it("reads meetingProvider field from existing interview", async () => {
+      const interviews = await prisma.interview.findMany({
+        where: { processId, meetingProvider: "zoom" },
+      });
+      expect(interviews.length).toBeGreaterThanOrEqual(1);
+      expect(interviews[0].meetingProvider).toBe("zoom");
+    });
   });
 
   // ─── User Operations ───

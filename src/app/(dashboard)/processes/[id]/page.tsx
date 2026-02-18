@@ -8,6 +8,7 @@ import {
   PIPELINE_STAGE_LABELS,
   STAGE_COLORS,
   INTERVIEW_TYPE_LABELS,
+  MEETING_PROVIDER_LABELS,
   EMAIL_TEMPLATE_CATEGORY_LABELS,
 } from "@/lib/constants";
 
@@ -33,6 +34,8 @@ type InterviewItem = {
   durationMinutes: number;
   type: string;
   meetingLink: string | null;
+  meetingProvider: string | null;
+  meetingId: string | null;
   location: string | null;
   clientParticipants: string | null;
   notes: string | null;
@@ -111,12 +114,15 @@ export default function ProcessDetailPage() {
     scheduledAt: "",
     type: "online" as string,
     durationMinutes: "60",
+    meetingProvider: "" as string,
     meetingLink: "",
     location: "",
     clientParticipants: "",
     notes: "",
+    sendInviteEmail: false,
   });
   const [savingInterview, setSavingInterview] = useState(false);
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   // Email
   const [showEmailPanel, setShowEmailPanel] = useState(false);
@@ -137,7 +143,7 @@ export default function ProcessDetailPage() {
   const [editingInterview, setEditingInterview] = useState<InterviewItem | null>(null);
   const [editInterviewForm, setEditInterviewForm] = useState({
     scheduledAt: "", type: "online", durationMinutes: "60",
-    meetingLink: "", location: "", clientParticipants: "", notes: "",
+    meetingProvider: "", meetingLink: "", location: "", clientParticipants: "", notes: "",
   });
   const [updatingInterview, setUpdatingInterview] = useState(false);
 
@@ -170,6 +176,15 @@ export default function ProcessDetailPage() {
   useEffect(() => {
     fetchProcess();
   }, [fetchProcess]);
+
+  useEffect(() => {
+    fetch("/api/meeting-providers")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) setAvailableProviders(json.data);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleStageChange() {
     if (!process || newStage === process.stage) return;
@@ -220,16 +235,18 @@ export default function ProcessDetailPage() {
         scheduledAt: interviewForm.scheduledAt,
         type: interviewForm.type,
         durationMinutes: Number(interviewForm.durationMinutes),
+        meetingProvider: interviewForm.meetingProvider || undefined,
         meetingLink: interviewForm.meetingLink || undefined,
         location: interviewForm.location || undefined,
         clientParticipants: interviewForm.clientParticipants || undefined,
         notes: interviewForm.notes || undefined,
+        sendInviteEmail: interviewForm.sendInviteEmail,
       }),
     });
     const data = await res.json();
     if (data.success) {
       setShowInterviewForm(false);
-      setInterviewForm({ scheduledAt: "", type: "online", durationMinutes: "60", meetingLink: "", location: "", clientParticipants: "", notes: "" });
+      setInterviewForm({ scheduledAt: "", type: "online", durationMinutes: "60", meetingProvider: "", meetingLink: "", location: "", clientParticipants: "", notes: "", sendInviteEmail: false });
       setInterviewError("");
       fetchProcess();
     } else {
@@ -244,6 +261,7 @@ export default function ProcessDetailPage() {
       scheduledAt: new Date(interview.scheduledAt).toISOString().slice(0, 16),
       type: interview.type,
       durationMinutes: String(interview.durationMinutes),
+      meetingProvider: interview.meetingProvider || "",
       meetingLink: interview.meetingLink || "",
       location: interview.location || "",
       clientParticipants: interview.clientParticipants || "",
@@ -876,17 +894,52 @@ export default function ProcessDetailPage() {
                         />
                       </div>
                       {interviewForm.type === "online" && (
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700">Toplantı Linki</label>
-                          <input
-                            type="url"
-                            value={interviewForm.meetingLink}
-                            onChange={(e) => setInterviewForm({ ...interviewForm, meetingLink: e.target.value })}
-                            placeholder="https://..."
-                            required
-                            className={inputClass}
-                          />
-                        </div>
+                        <>
+                          {availableProviders.length > 0 && (
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700">Toplantı Oluşturma</label>
+                              <select
+                                value={interviewForm.meetingProvider}
+                                onChange={(e) => setInterviewForm({
+                                  ...interviewForm,
+                                  meetingProvider: e.target.value,
+                                  meetingLink: e.target.value ? "" : interviewForm.meetingLink,
+                                })}
+                                className={inputClass}
+                              >
+                                <option value="">Manuel Link Girişi</option>
+                                {availableProviders.includes("zoom") && (
+                                  <option value="zoom">Zoom Toplantısı Oluştur</option>
+                                )}
+                                {availableProviders.includes("teams") && (
+                                  <option value="teams">Teams Toplantısı Oluştur</option>
+                                )}
+                              </select>
+                            </div>
+                          )}
+                          {!interviewForm.meetingProvider && (
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700">Toplantı Linki</label>
+                              <input
+                                type="url"
+                                value={interviewForm.meetingLink}
+                                onChange={(e) => setInterviewForm({ ...interviewForm, meetingLink: e.target.value })}
+                                placeholder="https://..."
+                                required
+                                className={inputClass}
+                              />
+                            </div>
+                          )}
+                          {interviewForm.meetingProvider && (
+                            <div className={availableProviders.length > 0 ? "" : "sm:col-span-2"}>
+                              <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mt-6">
+                                {interviewForm.meetingProvider === "zoom"
+                                  ? "Zoom toplantı linki otomatik oluşturulacak"
+                                  : "Teams toplantı linki otomatik oluşturulacak"}
+                              </p>
+                            </div>
+                          )}
+                        </>
                       )}
                       {interviewForm.type === "face_to_face" && (
                         <div>
@@ -920,6 +973,19 @@ export default function ProcessDetailPage() {
                           className={inputClass}
                         />
                       </div>
+                      {process?.candidate?.email && (
+                        <div className="sm:col-span-2">
+                          <label className="flex items-center gap-2 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={interviewForm.sendInviteEmail}
+                              onChange={(e) => setInterviewForm({ ...interviewForm, sendInviteEmail: e.target.checked })}
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            Adaya davet e-postası gönder
+                          </label>
+                        </div>
+                      )}
                       <div className="flex items-center gap-3 sm:col-span-2">
                         <button
                           type="submit"
@@ -1009,7 +1075,9 @@ export default function ProcessDetailPage() {
                     {interview.meetingLink && (
                       <p className="mt-2 text-sm text-blue-600">
                         <a href={interview.meetingLink} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                          Toplantı Linki
+                          {interview.meetingProvider
+                            ? `${MEETING_PROVIDER_LABELS[interview.meetingProvider] || interview.meetingProvider} Linki`
+                            : "Toplantı Linki"}
                         </a>
                       </p>
                     )}
@@ -1097,16 +1165,40 @@ export default function ProcessDetailPage() {
                             />
                           </div>
                           {editInterviewForm.type === "online" && (
-                            <div>
-                              <label className="block text-sm font-medium text-slate-700">Toplantı Linki</label>
-                              <input
-                                type="url"
-                                value={editInterviewForm.meetingLink}
-                                onChange={(e) => setEditInterviewForm({ ...editInterviewForm, meetingLink: e.target.value })}
-                                placeholder="https://..."
-                                className={inputClass}
-                              />
-                            </div>
+                            <>
+                              {availableProviders.length > 0 && (
+                                <div>
+                                  <label className="block text-sm font-medium text-slate-700">Toplantı Oluşturma</label>
+                                  <select
+                                    value={editInterviewForm.meetingProvider}
+                                    onChange={(e) => setEditInterviewForm({
+                                      ...editInterviewForm,
+                                      meetingProvider: e.target.value,
+                                      meetingLink: e.target.value ? "" : editInterviewForm.meetingLink,
+                                    })}
+                                    className={inputClass}
+                                  >
+                                    <option value="">Manuel Link Girişi</option>
+                                    {availableProviders.includes("zoom") && (
+                                      <option value="zoom">Zoom Toplantısı Oluştur</option>
+                                    )}
+                                    {availableProviders.includes("teams") && (
+                                      <option value="teams">Teams Toplantısı Oluştur</option>
+                                    )}
+                                  </select>
+                                </div>
+                              )}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700">Toplantı Linki</label>
+                                <input
+                                  type="url"
+                                  value={editInterviewForm.meetingLink}
+                                  onChange={(e) => setEditInterviewForm({ ...editInterviewForm, meetingLink: e.target.value })}
+                                  placeholder="https://..."
+                                  className={inputClass}
+                                />
+                              </div>
+                            </>
                           )}
                           {editInterviewForm.type === "face_to_face" && (
                             <div>

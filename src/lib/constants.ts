@@ -76,6 +76,11 @@ export const INTERVIEW_TYPE_LABELS: Record<string, string> = {
   phone: "Telefon",
 };
 
+export const MEETING_PROVIDER_LABELS: Record<string, string> = {
+  zoom: "Zoom",
+  teams: "Microsoft Teams",
+};
+
 export const EMAIL_TEMPLATE_CATEGORIES = [
   "mulakat_daveti",
   "red_bildirimi",

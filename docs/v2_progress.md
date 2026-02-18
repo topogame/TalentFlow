@@ -35,7 +35,7 @@
 - **Detay:** [ai_cv_parsing_test.md](ai_cv_parsing_test.md)
 
 ### 4. AI Aday-Pozisyon Eşleştirme
-**Durum:** Tamamlandı | **Commit:** (bekliyor)
+**Durum:** Tamamlandı | **Commit:** `4db6064`
 
 - Hibrit puanlama: Kural tabanlı (%40) + Claude AI (%60)
 - 7 kategori: Deneyim, Maaş, Konum, Eğitim, Beceri, Dil, Sektör
@@ -46,6 +46,18 @@
 - 67 yeni test eklendi (toplam: 424)
 - **Detay:** [ai_matching_test.md](ai_matching_test.md)
 
+### 5. Teams / Zoom Otomatik Toplantı
+**Durum:** Tamamlandı | **Commit:** (bekliyor)
+
+- Zoom Server-to-Server OAuth + Teams Application Permissions entegrasyonu
+- Mülakat formunda "Toplantı Oluşturma" seçici (Zoom/Teams/Manuel)
+- Otomatik toplantı linki oluşturma + meetingId ile takip
+- Adaya davet e-postası gönderme seçeneği (checkbox)
+- Mülakat silindiğinde harici toplantı otomatik iptal (best-effort)
+- Provider yapılandırılmamışsa mevcut manuel akış korunur (graceful fallback)
+- 26 yeni test eklendi (toplam: 450)
+- **Detay:** [meeting_integration_test.md](meeting_integration_test.md)
+
 ---
 
 ## Kalan Özellikler
@@ -53,10 +65,9 @@
 | # | Özellik | Öncelik | Açıklama | Durum |
 |---|---------|---------|----------|-------|
 | 1 | **LinkedIn / Kariyer.net Entegrasyonu** | Orta | Tek tıkla profil aktarma, otomatik başvuru senkronizasyonu | Bekliyor |
-| 2 | **Teams / Zoom Otomatik Toplantı** | Orta | Mülakat oluştururken otomatik toplantı linki + davetiye e-postası | Bekliyor |
-| 3 | **Aday Self-Service Portalı** | Orta | Adaylar kendi başvurularını takip edebileceği portal | Bekliyor |
-| 4 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
-| 5 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
+| 2 | **Aday Self-Service Portalı** | Orta | Adaylar kendi başvurularını takip edebileceği portal | Bekliyor |
+| 3 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
+| 4 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
 
 ---
 
@@ -64,12 +75,12 @@
 
 | Metrik | Değer |
 |--------|-------|
-| **Tamamlanan özellik** | 4 / 9 |
-| **Toplam test** | 424 |
-| **Test dosyası** | 11 |
-| **API route** | 60 |
+| **Tamamlanan özellik** | 5 / 9 |
+| **Toplam test** | 450 |
+| **Test dosyası** | 12 |
+| **API route** | 61 |
 | **Build** | Başarılı (Next.js 16.1.6, Turbopack) |
-| **Son commit** | `6ce8b47` — AI CV Parsing |
+| **Son commit** | `4db6064` — AI Matching |
 | **Branch** | `master` |
 
 ---
