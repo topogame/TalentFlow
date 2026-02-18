@@ -107,6 +107,19 @@ export const EMAIL_DYNAMIC_FIELDS = [
   { key: "{consultantName}", label: "Danışman Adı", description: "Sorumlu danışman" },
 ] as const;
 
+// ─── Candidate Portal ───
+export const PORTAL_STAGE_LABELS: Record<string, string> = {
+  pool: "Değerlendirme Aşaması",
+  initial_interview: "Ön Görüşme",
+  submitted: "Firmaya Sunuldu",
+  interview: "Firma Mülakatı",
+  positive: "Olumlu Sonuç",
+  negative: "Süreç Sonlandı",
+  on_hold: "Beklemede",
+};
+
+export const PORTAL_TOKEN_EXPIRY_DAYS = 7;
+
 // ─── AI Matching ───
 export const MATCH_CATEGORY_LABELS: Record<string, string> = {
   experience: "Deneyim",

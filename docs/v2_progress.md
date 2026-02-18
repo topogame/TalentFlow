@@ -58,6 +58,18 @@
 - 26 yeni test eklendi (toplam: 450)
 - **Detay:** [meeting_integration_test.md](meeting_integration_test.md)
 
+### 6. Aday Self-Service Portalı
+**Durum:** Tamamlandı | **Commit:** (bekliyor)
+
+- Magic link (token) ile aday girişi (64-char hex, 7 gün, tek kullanım)
+- Portal dashboard: başvuru listesi, süreç detay, mülakatlar timeline
+- Profil sayfası (read-only): kişisel, profesyonel, eğitim, diller
+- E-postalarım sayfası: adaya gönderilen tüm e-postaların listesi
+- Danışman tarafında "Portal Erişimi Gönder" butonu (aday detay sayfası)
+- Yetki kontrolü: portal kullanıcısı dashboard'a erişemez, danışman API'leri portal kullanıcılarını reddeder
+- 21 yeni test eklendi (toplam: 471)
+- **Detay:** [candidate_portal_test.md](candidate_portal_test.md)
+
 ---
 
 ## Kalan Özellikler
@@ -65,9 +77,8 @@
 | # | Özellik | Öncelik | Açıklama | Durum |
 |---|---------|---------|----------|-------|
 | 1 | **LinkedIn / Kariyer.net Entegrasyonu** | Orta | Tek tıkla profil aktarma, otomatik başvuru senkronizasyonu | Bekliyor |
-| 2 | **Aday Self-Service Portalı** | Orta | Adaylar kendi başvurularını takip edebileceği portal | Bekliyor |
-| 3 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
-| 4 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
+| 2 | **Çok Dilli Destek** | Düşük | Türkçe + İngilizce + potansiyel Arapça arayüz desteği | Bekliyor |
+| 3 | **Mobil Uygulama** | Düşük | iOS + Android native uygulama | Bekliyor |
 
 ---
 
@@ -75,12 +86,12 @@
 
 | Metrik | Değer |
 |--------|-------|
-| **Tamamlanan özellik** | 5 / 9 |
-| **Toplam test** | 450 |
-| **Test dosyası** | 12 |
-| **API route** | 61 |
+| **Tamamlanan özellik** | 6 / 9 |
+| **Toplam test** | 471 |
+| **Test dosyası** | 13 |
+| **API route** | 66 |
 | **Build** | Başarılı (Next.js 16.1.6, Turbopack) |
-| **Son commit** | `4db6064` — AI Matching |
+| **Son commit** | (bekliyor) — Candidate Portal |
 | **Branch** | `master` |
 
 ---

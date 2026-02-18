@@ -32,6 +32,7 @@ describe("Database Integration", () => {
 
   afterAll(async () => {
     // Clean up test data in correct order (respecting foreign keys)
+    await prisma.candidatePortalToken.deleteMany({ where: { createdById: testUserId } });
     await prisma.auditLog.deleteMany({ where: { userId: testUserId } });
     await prisma.emailLog.deleteMany({ where: { sentById: testUserId } });
     await prisma.emailTemplate.deleteMany({ where: { createdById: testUserId } });
@@ -1272,6 +1273,135 @@ describe("Database Integration", () => {
           expect(a).toBeGreaterThanOrEqual(b);
         }
       }
+    });
+  });
+
+  // ─── Candidate Portal Token ───
+  describe("Candidate Portal Token", () => {
+    it("creates a portal token for a candidate", async () => {
+      const token = await prisma.candidatePortalToken.create({
+        data: {
+          token: "test-token-" + Date.now(),
+          candidateId: testCandidateId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          createdById: testUserId,
+        },
+      });
+
+      expect(token.id).toBeDefined();
+      expect(token.candidateId).toBe(testCandidateId);
+      expect(token.usedAt).toBeNull();
+    });
+
+    it("finds token by unique token string", async () => {
+      const uniqueToken = "unique-portal-" + Date.now();
+      await prisma.candidatePortalToken.create({
+        data: {
+          token: uniqueToken,
+          candidateId: testCandidateId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          createdById: testUserId,
+        },
+      });
+
+      const found = await prisma.candidatePortalToken.findUnique({
+        where: { token: uniqueToken },
+      });
+
+      expect(found).not.toBeNull();
+      expect(found!.candidateId).toBe(testCandidateId);
+    });
+
+    it("updates usedAt to mark token as consumed", async () => {
+      const uniqueToken = "consume-portal-" + Date.now();
+      const created = await prisma.candidatePortalToken.create({
+        data: {
+          token: uniqueToken,
+          candidateId: testCandidateId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          createdById: testUserId,
+        },
+      });
+
+      const updated = await prisma.candidatePortalToken.update({
+        where: { id: created.id },
+        data: { usedAt: new Date() },
+      });
+
+      expect(updated.usedAt).not.toBeNull();
+    });
+
+    it("invalidates multiple active tokens via updateMany", async () => {
+      const prefix = "bulk-" + Date.now();
+      await prisma.candidatePortalToken.createMany({
+        data: [
+          {
+            token: prefix + "-1",
+            candidateId: testCandidateId,
+            expiresAt: new Date(Date.now() + 86400000),
+            createdById: testUserId,
+          },
+          {
+            token: prefix + "-2",
+            candidateId: testCandidateId,
+            expiresAt: new Date(Date.now() + 86400000),
+            createdById: testUserId,
+          },
+        ],
+      });
+
+      const result = await prisma.candidatePortalToken.updateMany({
+        where: {
+          candidateId: testCandidateId,
+          usedAt: null,
+          token: { startsWith: prefix },
+        },
+        data: { usedAt: new Date() },
+      });
+
+      expect(result.count).toBeGreaterThanOrEqual(2);
+    });
+
+    it("cascades delete when candidate is deleted", async () => {
+      // Create a temporary candidate
+      const tempCandidate = await prisma.candidate.create({
+        data: {
+          firstName: "Temp",
+          lastName: "Portal",
+          email: "temp-portal@test.com",
+          createdById: testUserId,
+        },
+      });
+
+      const tokenStr = "cascade-" + Date.now();
+      await prisma.candidatePortalToken.create({
+        data: {
+          token: tokenStr,
+          candidateId: tempCandidate.id,
+          expiresAt: new Date(Date.now() + 86400000),
+          createdById: testUserId,
+        },
+      });
+
+      // Delete candidate — token should cascade
+      await prisma.candidate.delete({ where: { id: tempCandidate.id } });
+
+      const found = await prisma.candidatePortalToken.findUnique({
+        where: { token: tokenStr },
+      });
+      expect(found).toBeNull();
+    });
+
+    it("queries tokens by candidateId", async () => {
+      const tokens = await prisma.candidatePortalToken.findMany({
+        where: { candidateId: testCandidateId },
+      });
+
+      // Should have tokens from previous tests
+      expect(tokens.length).toBeGreaterThan(0);
+      tokens.forEach((t) => {
+        expect(t.candidateId).toBe(testCandidateId);
+      });
     });
   });
 

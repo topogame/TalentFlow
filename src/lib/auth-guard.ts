@@ -37,3 +37,28 @@ export async function requireAdmin() {
   }
   return { session, error: null };
 }
+
+export async function requireCandidateAuth() {
+  const session = await getAuthSession();
+  if (!session) {
+    return {
+      session: null,
+      candidateId: null,
+      error: NextResponse.json(errorResponse("UNAUTHORIZED", "Oturum açmanız gerekiyor"), {
+        status: 401,
+      }),
+    };
+  }
+
+  if (session.user.userType !== "candidate" || !session.user.candidateId) {
+    return {
+      session: null,
+      candidateId: null,
+      error: NextResponse.json(errorResponse("FORBIDDEN", "Bu alan sadece adaylar içindir"), {
+        status: 403,
+      }),
+    };
+  }
+
+  return { session, candidateId: session.user.candidateId, error: null };
+}

@@ -70,6 +70,8 @@ export default function CandidateDetailPage() {
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
+  const [sendingPortalAccess, setSendingPortalAccess] = useState(false);
+  const [portalAccessMessage, setPortalAccessMessage] = useState("");
 
   const fetchCandidate = useCallback(async () => {
     const res = await fetch(`/api/candidates/${id}`);
@@ -115,6 +117,30 @@ export default function CandidateDetailPage() {
     fetchNotes();
   }
 
+  async function handleSendPortalAccess() {
+    if (!candidate?.email) return;
+    setSendingPortalAccess(true);
+    setPortalAccessMessage("");
+    try {
+      const res = await fetch("/api/candidate-portal/send-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateId: id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPortalAccessMessage("Portal erişim bağlantısı gönderildi!");
+      } else {
+        setPortalAccessMessage(data.message || "Gönderilemedi");
+      }
+    } catch {
+      setPortalAccessMessage("Bir hata oluştu");
+    } finally {
+      setSendingPortalAccess(false);
+      setTimeout(() => setPortalAccessMessage(""), 5000);
+    }
+  }
+
   if (loading)
     return (
       <div className="flex items-center justify-center py-20">
@@ -158,15 +184,39 @@ export default function CandidateDetailPage() {
             </div>
           </div>
         </div>
-        <Link
-          href={`/candidates/${id}/edit`}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-          </svg>
-          Düzenle
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              onClick={handleSendPortalAccess}
+              disabled={!candidate.email || sendingPortalAccess}
+              title={!candidate.email ? "Aday e-posta adresi gerekli" : "Adaya portal erişim bağlantısı gönder"}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+              {sendingPortalAccess ? "Gönderiliyor..." : "Portal Erişimi Gönder"}
+            </button>
+            {portalAccessMessage && (
+              <div className={`absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium shadow-lg ${
+                portalAccessMessage.includes("gönderildi")
+                  ? "bg-emerald-500 text-white"
+                  : "bg-red-500 text-white"
+              }`}>
+                {portalAccessMessage}
+              </div>
+            )}
+          </div>
+          <Link
+            href={`/candidates/${id}/edit`}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+            </svg>
+            Düzenle
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}

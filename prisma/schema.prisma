@@ -112,6 +112,7 @@ model User {
   sentEmails           EmailLog[]
   auditLogs            AuditLog[]
   updatedSettings      Setting[]
+  portalTokens         CandidatePortalToken[]
 
   @@map("users")
 }
@@ -142,12 +143,13 @@ model Candidate {
   updatedAt            DateTime        @updatedAt @map("updated_at")
 
   // Relations
-  createdBy  User                @relation("CandidateCreatedBy", fields: [createdById], references: [id])
-  languages  CandidateLanguage[]
-  documents  CandidateDocument[]
-  notes      CandidateNote[]
-  processes  Process[]
-  emailLogs  EmailLog[]
+  createdBy     User                @relation("CandidateCreatedBy", fields: [createdById], references: [id])
+  languages     CandidateLanguage[]
+  documents     CandidateDocument[]
+  notes         CandidateNote[]
+  processes     Process[]
+  emailLogs     EmailLog[]
+  portalTokens  CandidatePortalToken[]
 
   @@index([email])
   @@index([phone])
@@ -467,4 +469,22 @@ model Setting {
   updatedBy User? @relation(fields: [updatedById], references: [id])
 
   @@map("settings")
+}
+
+model CandidatePortalToken {
+  id          String    @id @default(cuid())
+  token       String    @unique @db.VarChar(128)
+  candidateId String    @map("candidate_id") @db.Uuid
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdById String    @map("created_by_id") @db.Uuid
+
+  // Relations
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([candidateId])
+  @@index([token])
+  @@map("candidate_portal_tokens")
 }
