@@ -27,6 +27,8 @@ import {
   auditLogListSchema,
   exportQuerySchema,
   reportsQuerySchema,
+  importCandidateRowSchema,
+  customReportSchema,
 } from "./validations";
 
 // ─── Login Schema ───
@@ -1009,6 +1011,229 @@ describe("reportsQuerySchema", () => {
 
   it("rejects invalid date", () => {
     const result = reportsQuerySchema.safeParse({ dateFrom: "xyz" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ─── Import Candidate Row Schema ───
+
+describe("importCandidateRowSchema", () => {
+  it("accepts valid minimal row (firstName + lastName)", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ayşe",
+      lastName: "Yılmaz",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing firstName", () => {
+    const result = importCandidateRowSchema.safeParse({
+      lastName: "Yılmaz",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing lastName", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ayşe",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts full candidate data", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ayşe",
+      lastName: "Yılmaz",
+      email: "ayse@test.com",
+      phone: "+90 555 1234567",
+      linkedinUrl: "https://linkedin.com/in/ayseyilmaz",
+      educationLevel: "Lisans",
+      universityName: "İTÜ",
+      universityDepartment: "Bilgisayar Mühendisliği",
+      totalExperienceYears: 5,
+      currentSector: "Teknoloji",
+      currentTitle: "Yazılım Mühendisi",
+      salaryExpectation: 45000,
+      salaryCurrency: "TRY",
+      salaryType: "net",
+      country: "Türkiye",
+      city: "İstanbul",
+      isRemoteEligible: true,
+      isHybridEligible: false,
+      languages: [
+        { language: "İngilizce", level: "advanced" },
+        { language: "Almanca", level: "intermediate" },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts empty string for optional email", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      email: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts undefined for optional email", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      email: undefined,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      email: "not-an-email",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid salaryCurrency", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      salaryCurrency: "GBP",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid languages array", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      languages: [{ language: "İngilizce", level: "native" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid language level", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      languages: [{ language: "İngilizce", level: "expert" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("coerces string numbers for experience years", () => {
+    const result = importCandidateRowSchema.safeParse({
+      firstName: "Ali",
+      lastName: "Kaya",
+      totalExperienceYears: "5",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.totalExperienceYears).toBe(5);
+    }
+  });
+});
+
+// ─── Custom Report Schema ───
+
+describe("customReportSchema", () => {
+  it("accepts valid custom report request", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns: ["firstName", "lastName", "email"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts all entity types", () => {
+    const types = ["candidates", "firms", "positions", "processes", "interviews"];
+    for (const entityType of types) {
+      const result = customReportSchema.safeParse({
+        entityType,
+        columns: ["col1"],
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects invalid entity type", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "users",
+      columns: ["col1"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty columns", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts filters", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns: ["firstName"],
+      filters: { status: "active", city: "İstanbul" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.filters).toEqual({ status: "active", city: "İstanbul" });
+    }
+  });
+
+  it("accepts sort", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns: ["firstName"],
+      sort: { field: "createdAt", order: "desc" },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid sort order", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns: ["firstName"],
+      sort: { field: "createdAt", order: "random" },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts date range", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "firms",
+      columns: ["name"],
+      dateFrom: "2025-01-01",
+      dateTo: "2025-12-31",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dateFrom).toBeInstanceOf(Date);
+      expect(result.data.dateTo).toBeInstanceOf(Date);
+    }
+  });
+
+  it("defaults filters to empty object", () => {
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns: ["firstName"],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.filters).toEqual({});
+    }
+  });
+
+  it("rejects more than 30 columns", () => {
+    const columns = Array.from({ length: 31 }, (_, i) => `col${i}`);
+    const result = customReportSchema.safeParse({
+      entityType: "candidates",
+      columns,
+    });
     expect(result.success).toBe(false);
   });
 });

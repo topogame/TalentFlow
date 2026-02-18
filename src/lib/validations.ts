@@ -324,3 +324,42 @@ export const reportsQuerySchema = z.object({
   dateTo: z.coerce.date().optional(),
   period: z.enum(["week", "month", "quarter", "year"]).optional().default("month"),
 });
+
+// Import
+export const importCandidateRowSchema = z.object({
+  firstName: z.string().min(1, "Ad gerekli").max(100),
+  lastName: z.string().min(1, "Soyad gerekli").max(100),
+  email: z.string().email("Geçerli bir e-posta girin").max(255).optional().or(z.literal("")).or(z.literal(undefined)),
+  phone: z.string().max(30).optional().or(z.literal("")),
+  linkedinUrl: z.string().url("Geçerli bir URL girin").max(500).optional().or(z.literal("")).or(z.literal(undefined)),
+  educationLevel: z.string().max(100).optional().or(z.literal("")),
+  universityName: z.string().max(200).optional().or(z.literal("")),
+  universityDepartment: z.string().max(200).optional().or(z.literal("")),
+  totalExperienceYears: z.coerce.number().int().min(0).max(50).optional().nullable(),
+  currentSector: z.string().max(200).optional().or(z.literal("")),
+  currentTitle: z.string().max(200).optional().or(z.literal("")),
+  salaryExpectation: z.coerce.number().min(0).optional().nullable(),
+  salaryCurrency: z.enum(["TRY", "USD", "EUR"]).optional(),
+  salaryType: z.enum(["net", "gross"]).optional().nullable(),
+  country: z.string().max(100).optional().or(z.literal("")),
+  city: z.string().max(100).optional().or(z.literal("")),
+  isRemoteEligible: z.boolean().optional(),
+  isHybridEligible: z.boolean().optional(),
+  languages: z.array(z.object({
+    language: z.string().min(1).max(50),
+    level: z.enum(["beginner", "intermediate", "advanced", "native"]),
+  })).optional(),
+});
+
+// Custom Report
+export const customReportSchema = z.object({
+  entityType: z.enum(["candidates", "firms", "positions", "processes", "interviews"]),
+  columns: z.array(z.string().min(1)).min(1, "En az bir sütun seçin").max(30),
+  filters: z.record(z.string(), z.unknown()).optional().default({}),
+  sort: z.object({
+    field: z.string(),
+    order: z.enum(["asc", "desc"]),
+  }).optional(),
+  dateFrom: z.coerce.date().optional(),
+  dateTo: z.coerce.date().optional(),
+});

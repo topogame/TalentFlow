@@ -992,6 +992,240 @@ describe("Database Integration", () => {
     });
   });
 
+  // ─── Firm Export Queries ───
+  describe("Firm Export Queries", () => {
+    it("fetches firms with contacts and counts", async () => {
+      const firms = await prisma.firm.findMany({
+        where: { createdById: testUserId },
+        include: {
+          contacts: { where: { isPrimary: true }, take: 1 },
+          _count: { select: { positions: true, processes: true } },
+        },
+        take: 100,
+      });
+      expect(firms.length).toBeGreaterThanOrEqual(1);
+      expect(firms[0]._count).toBeDefined();
+      expect(firms[0]._count.positions).toBeGreaterThanOrEqual(0);
+      expect(firms[0]._count.processes).toBeGreaterThanOrEqual(0);
+    });
+
+    it("applies date filter to firm export", async () => {
+      const lastYear = new Date();
+      lastYear.setFullYear(lastYear.getFullYear() - 1);
+
+      const firms = await prisma.firm.findMany({
+        where: {
+          createdById: testUserId,
+          createdAt: { gte: lastYear },
+        },
+        include: {
+          _count: { select: { positions: true, processes: true } },
+        },
+        take: 100,
+      });
+      expect(Array.isArray(firms)).toBe(true);
+    });
+  });
+
+  // ─── Interview Export Queries ───
+  describe("Interview Export Queries", () => {
+    it("fetches interviews with process relations", async () => {
+      const interviews = await prisma.interview.findMany({
+        include: {
+          process: {
+            include: {
+              candidate: { select: { firstName: true, lastName: true } },
+              firm: { select: { name: true } },
+              position: { select: { title: true } },
+            },
+          },
+        },
+        orderBy: { scheduledAt: "desc" },
+        take: 100,
+      });
+      expect(Array.isArray(interviews)).toBe(true);
+      if (interviews.length > 0) {
+        expect(interviews[0].process.candidate.firstName).toBeDefined();
+        expect(interviews[0].process.firm.name).toBeDefined();
+        expect(interviews[0].process.position.title).toBeDefined();
+      }
+    });
+
+    it("filters interviews by date range", async () => {
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      const interviews = await prisma.interview.findMany({
+        where: {
+          scheduledAt: {
+            gte: lastMonth,
+            lte: nextMonth,
+          },
+        },
+        take: 100,
+      });
+      expect(Array.isArray(interviews)).toBe(true);
+    });
+  });
+
+  // ─── Bulk Import Queries ───
+  describe("Bulk Import Queries", () => {
+    it("creates multiple candidates in sequence", async () => {
+      const candidates = [];
+      for (let i = 0; i < 3; i++) {
+        const c = await prisma.candidate.create({
+          data: {
+            firstName: `Import${i}`,
+            lastName: `Test${i}`,
+            email: `import${i}@test.local`,
+            currentSector: "Test Sektör",
+            createdById: testUserId,
+          },
+        });
+        candidates.push(c);
+      }
+      expect(candidates.length).toBe(3);
+      expect(candidates[0].firstName).toBe("Import0");
+      expect(candidates[2].firstName).toBe("Import2");
+    });
+
+    it("creates candidate with nested languages", async () => {
+      const candidate = await prisma.candidate.create({
+        data: {
+          firstName: "Dil",
+          lastName: "Testi",
+          createdById: testUserId,
+          languages: {
+            create: [
+              { language: "İngilizce", level: "advanced" },
+              { language: "Almanca", level: "intermediate" },
+            ],
+          },
+        },
+        include: { languages: true },
+      });
+      expect(candidate.languages.length).toBe(2);
+      expect(candidate.languages[0].language).toBe("İngilizce");
+    });
+
+    it("batch duplicate detection by email", async () => {
+      const emails = ["import0@test.local", "import1@test.local", "nonexistent@test.local"];
+      const matches = await prisma.candidate.findMany({
+        where: { email: { in: emails } },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      });
+      expect(matches.length).toBeGreaterThanOrEqual(2);
+      expect(matches.every((m) => emails.includes(m.email!))).toBe(true);
+    });
+
+    it("batch duplicate detection by phone", async () => {
+      const matches = await prisma.candidate.findMany({
+        where: {
+          phone: { not: null },
+          OR: [
+            { phone: { contains: "555" } },
+          ],
+        },
+        select: { id: true, firstName: true, lastName: true, phone: true },
+        take: 100,
+      });
+      expect(Array.isArray(matches)).toBe(true);
+    });
+  });
+
+  // ─── Custom Report Queries ───
+  describe("Custom Report Queries", () => {
+    it("queries candidates with dynamic filters", async () => {
+      const candidates = await prisma.candidate.findMany({
+        where: {
+          status: "active",
+          city: { contains: "İstanbul", mode: "insensitive" },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
+      });
+      expect(Array.isArray(candidates)).toBe(true);
+    });
+
+    it("queries firms with _count include", async () => {
+      const firms = await prisma.firm.findMany({
+        include: {
+          _count: { select: { positions: true, processes: true } },
+        },
+        take: 5000,
+      });
+      expect(Array.isArray(firms)).toBe(true);
+      if (firms.length > 0) {
+        expect(firms[0]._count).toBeDefined();
+      }
+    });
+
+    it("queries positions with firm relation", async () => {
+      const positions = await prisma.position.findMany({
+        where: { status: "open" },
+        include: {
+          firm: { select: { name: true } },
+          _count: { select: { processes: true } },
+        },
+        take: 5000,
+      });
+      expect(Array.isArray(positions)).toBe(true);
+      if (positions.length > 0) {
+        expect(positions[0].firm.name).toBeDefined();
+      }
+    });
+
+    it("queries processes with all relations", async () => {
+      const processes = await prisma.process.findMany({
+        where: { stage: "pool" },
+        include: {
+          candidate: { select: { firstName: true, lastName: true } },
+          firm: { select: { name: true } },
+          position: { select: { title: true } },
+          assignedTo: { select: { firstName: true, lastName: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
+      });
+      expect(Array.isArray(processes)).toBe(true);
+    });
+
+    it("queries interviews with nested process relations", async () => {
+      const interviews = await prisma.interview.findMany({
+        where: { type: "face_to_face" },
+        include: {
+          process: {
+            include: {
+              candidate: { select: { firstName: true, lastName: true } },
+              firm: { select: { name: true } },
+              position: { select: { title: true } },
+            },
+          },
+        },
+        take: 5000,
+      });
+      expect(Array.isArray(interviews)).toBe(true);
+    });
+
+    it("applies custom sort order", async () => {
+      const candidates = await prisma.candidate.findMany({
+        orderBy: { totalExperienceYears: "desc" },
+        take: 10,
+      });
+      expect(Array.isArray(candidates)).toBe(true);
+      // Verify descending order (null values may be mixed in)
+      for (let i = 0; i < candidates.length - 1; i++) {
+        const a = candidates[i].totalExperienceYears;
+        const b = candidates[i + 1].totalExperienceYears;
+        if (a !== null && b !== null) {
+          expect(a).toBeGreaterThanOrEqual(b);
+        }
+      }
+    });
+  });
+
   // ─── Edge Cases ───
   describe("Edge Cases", () => {
     it("handles duplicate user email gracefully", async () => {

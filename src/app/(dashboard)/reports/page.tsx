@@ -17,6 +17,12 @@ import {
   Legend,
 } from "recharts";
 import { PIPELINE_STAGE_LABELS } from "@/lib/constants";
+import {
+  REPORT_COLUMNS,
+  REPORT_FILTERS,
+  type ReportEntityType,
+  type FilterOption,
+} from "@/lib/report-columns";
 
 // ─── Types ───
 
@@ -89,6 +95,14 @@ function getPresets(): DatePreset[] {
 
 // ─── Page ───
 
+const ENTITY_OPTIONS: { value: ReportEntityType; label: string }[] = [
+  { value: "candidates", label: "Adaylar" },
+  { value: "firms", label: "Firmalar" },
+  { value: "positions", label: "Pozisyonlar" },
+  { value: "processes", label: "Süreçler" },
+  { value: "interviews", label: "Mülakatlar" },
+];
+
 export default function ReportsPage() {
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +111,94 @@ export default function ReportsPage() {
   const [dateTo, setDateTo] = useState<Date | null>(null);
   const [exporting, setExporting] = useState<string | null>(null);
   const presets = getPresets();
+
+  // Custom Report Builder state
+  const [crEntity, setCrEntity] = useState<ReportEntityType>("candidates");
+  const [crColumns, setCrColumns] = useState<Set<string>>(new Set());
+  const [crFilters, setCrFilters] = useState<Record<string, string>>({});
+  const [crSortField, setCrSortField] = useState("");
+  const [crSortOrder, setCrSortOrder] = useState<"asc" | "desc">("desc");
+  const [crDateFrom, setCrDateFrom] = useState("");
+  const [crDateTo, setCrDateTo] = useState("");
+  const [crExporting, setCrExporting] = useState(false);
+  const [crError, setCrError] = useState("");
+
+  // Reset selections when entity type changes
+  function handleEntityChange(entity: ReportEntityType) {
+    setCrEntity(entity);
+    setCrColumns(new Set());
+    setCrFilters({});
+    setCrSortField("");
+    setCrSortOrder("desc");
+    setCrError("");
+  }
+
+  function toggleColumn(key: string) {
+    setCrColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function selectAllColumns() {
+    const all = REPORT_COLUMNS[crEntity].map((c) => c.key);
+    setCrColumns(new Set(all));
+  }
+
+  function deselectAllColumns() {
+    setCrColumns(new Set());
+  }
+
+  async function handleCustomExport() {
+    if (crColumns.size === 0) {
+      setCrError("En az bir sütun seçin");
+      return;
+    }
+    setCrError("");
+    setCrExporting(true);
+
+    const body: Record<string, unknown> = {
+      entityType: crEntity,
+      columns: Array.from(crColumns),
+      filters: crFilters,
+    };
+
+    if (crSortField) {
+      body.sort = { field: crSortField, order: crSortOrder };
+    }
+    if (crDateFrom) body.dateFrom = new Date(crDateFrom).toISOString();
+    if (crDateTo) body.dateTo = new Date(crDateTo).toISOString();
+
+    try {
+      const res = await fetch("/api/exports/custom", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ozel_rapor_${crEntity}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const json = await res.json();
+        setCrError(json.error?.message || "Rapor oluşturulamadı");
+      }
+    } catch {
+      setCrError("Bağlantı hatası");
+    } finally {
+      setCrExporting(false);
+    }
+  }
+
+  const crAvailableColumns = REPORT_COLUMNS[crEntity] || [];
+  const crAvailableFilters: FilterOption[] = REPORT_FILTERS[crEntity] || [];
 
   useEffect(() => {
     fetchData();
@@ -121,7 +223,7 @@ export default function ReportsPage() {
     setDateTo(presets[idx].to);
   }
 
-  async function handleExport(type: "candidates" | "processes" | "positions") {
+  async function handleExport(type: "candidates" | "processes" | "positions" | "firms" | "interviews") {
     setExporting(type);
     const params = new URLSearchParams();
     if (dateFrom) params.set("dateFrom", dateFrom.toISOString());
@@ -195,6 +297,8 @@ export default function ReportsPage() {
             { type: "candidates" as const, label: "Adaylar" },
             { type: "processes" as const, label: "Süreçler" },
             { type: "positions" as const, label: "Pozisyonlar" },
+            { type: "firms" as const, label: "Firmalar" },
+            { type: "interviews" as const, label: "Mülakatlar" },
           ] as const
         ).map((item) => (
           <button
@@ -358,6 +462,210 @@ export default function ReportsPage() {
           </div>
         </div>
       )}
+
+      {/* ─── Custom Report Builder ─── */}
+      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="text-lg font-bold text-slate-900">Özel Rapor Oluşturucu</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Veri tipini seçin, sütunları ve filtreleri belirleyin, ardından raporu Excel olarak indirin.
+        </p>
+
+        {/* Entity Type */}
+        <div className="mt-5">
+          <label className="block text-sm font-medium text-slate-700">Veri Tipi</label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ENTITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleEntityChange(opt.value)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  crEntity === opt.value
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Column Selection */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-slate-700">
+              Sütunlar ({crColumns.size} / {crAvailableColumns.length})
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={selectAllColumns}
+                className="text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                Tümünü Seç
+              </button>
+              <button
+                onClick={deselectAllColumns}
+                className="text-xs text-slate-500 hover:text-slate-700"
+              >
+                Temizle
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {crAvailableColumns.map((col) => (
+              <label
+                key={col.key}
+                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
+                  crColumns.has(col.key)
+                    ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
+                    : "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={crColumns.has(col.key)}
+                  onChange={() => toggleColumn(col.key)}
+                  className="sr-only"
+                />
+                {crColumns.has(col.key) && (
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                )}
+                {col.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Filters */}
+        {crAvailableFilters.length > 0 && (
+          <div className="mt-5">
+            <label className="block text-sm font-medium text-slate-700">Filtreler</label>
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {crAvailableFilters.map((filter) => (
+                <div key={filter.key}>
+                  <label className="block text-xs text-slate-500">{filter.label}</label>
+                  {filter.type === "select" ? (
+                    <select
+                      value={crFilters[filter.key] || ""}
+                      onChange={(e) =>
+                        setCrFilters((prev) => {
+                          const next = { ...prev };
+                          if (e.target.value) next[filter.key] = e.target.value;
+                          else delete next[filter.key];
+                          return next;
+                        })
+                      }
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
+                    >
+                      <option value="">Tümü</option>
+                      {filter.options?.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={crFilters[filter.key] || ""}
+                      onChange={(e) =>
+                        setCrFilters((prev) => {
+                          const next = { ...prev };
+                          if (e.target.value) next[filter.key] = e.target.value;
+                          else delete next[filter.key];
+                          return next;
+                        })
+                      }
+                      placeholder={filter.label}
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sort + Date Range */}
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Sort Field */}
+          <div>
+            <label className="block text-xs text-slate-500">Sıralama</label>
+            <select
+              value={crSortField}
+              onChange={(e) => setCrSortField(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
+            >
+              <option value="">Varsayılan</option>
+              {crAvailableColumns
+                .filter((c) => !c.relation || c.relation === "_count")
+                .map((col) => (
+                  <option key={col.key} value={col.key}>
+                    {col.label}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* Sort Order */}
+          <div>
+            <label className="block text-xs text-slate-500">Sıralama Yönü</label>
+            <select
+              value={crSortOrder}
+              onChange={(e) => setCrSortOrder(e.target.value as "asc" | "desc")}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
+            >
+              <option value="desc">Azalan</option>
+              <option value="asc">Artan</option>
+            </select>
+          </div>
+
+          {/* Date From */}
+          <div>
+            <label className="block text-xs text-slate-500">Başlangıç Tarihi</label>
+            <input
+              type="date"
+              value={crDateFrom}
+              onChange={(e) => setCrDateFrom(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
+            />
+          </div>
+
+          {/* Date To */}
+          <div>
+            <label className="block text-xs text-slate-500">Bitiş Tarihi</label>
+            <input
+              type="date"
+              value={crDateTo}
+              onChange={(e) => setCrDateTo(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
+            />
+          </div>
+        </div>
+
+        {/* Error + Download Button */}
+        {crError && (
+          <p className="mt-3 text-sm text-rose-600">{crError}</p>
+        )}
+
+        <div className="mt-5">
+          <button
+            onClick={handleCustomExport}
+            disabled={crExporting || crColumns.size === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            {crExporting ? "Rapor Oluşturuluyor..." : "Raporu İndir"}
+          </button>
+          <span className="ml-3 text-xs text-slate-400">
+            Maks. 5.000 satır
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
