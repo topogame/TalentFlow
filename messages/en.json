@@ -457,6 +457,10 @@
     "closeNotePlaceholder": "Closing reason or additional info...",
     "closePositive": "Close Positive",
     "closeNegative": "Close Negative",
+    "reopenProcess": "Reopen Process",
+    "reopenProcessDesc": "This process will be reopened and moved to {stage} stage.",
+    "reopenNotePlaceholder": "Reason for reopening or additional info...",
+    "reopenConfirm": "Reopen",
     "goToProcess": "Go to Process",
     "processNotFound": "Process not found",
     "detail": {

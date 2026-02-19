@@ -34,13 +34,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   if (!existing) {
     return NextResponse.json(errorResponse("NOT_FOUND", "Süreç bulunamadı"), { status: 404 });
   }
-  if (existing.closedAt) {
-    return NextResponse.json(
-      errorResponse("PROCESS_CLOSED", "Kapatılmış sürecin aşaması değiştirilemez"),
-      { status: 400 }
-    );
-  }
-
   const newStage = parsed.data.stage;
   if (existing.stage === newStage) {
     return NextResponse.json(
@@ -50,6 +43,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 
   const isClosing = CLOSED_STAGES.includes(newStage as (typeof CLOSED_STAGES)[number]);
+  const isReopening = existing.closedAt && !isClosing;
 
   const process = await prisma.$transaction(async (tx) => {
     const updated = await tx.process.update({
@@ -58,6 +52,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         stage: newStage,
         stageChangedAt: new Date(),
         ...(isClosing ? { closedAt: new Date() } : {}),
+        ...(isReopening ? { closedAt: null } : {}),
       },
       include: {
         candidate: { select: { id: true, firstName: true, lastName: true } },

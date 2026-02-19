@@ -45,6 +45,7 @@ type PendingDrop = {
   toStage: string;
   sourceIndex: number;
   destIndex: number;
+  type: "close" | "reopen";
 };
 
 export default function ProcessesPage() {
@@ -187,10 +188,11 @@ export default function ProcessesPage() {
     const fromStage = source.droppableId;
     const toStage = destination.droppableId;
 
-    // If moving to a closing stage, show confirmation modal
+    // If moving to a closing stage, show close confirmation modal
     if (
       fromStage !== toStage &&
-      (CLOSED_STAGES as readonly string[]).includes(toStage)
+      (CLOSED_STAGES as readonly string[]).includes(toStage) &&
+      !(CLOSED_STAGES as readonly string[]).includes(fromStage)
     ) {
       setPendingDrop({
         processId: draggableId,
@@ -198,6 +200,25 @@ export default function ProcessesPage() {
         toStage,
         sourceIndex: source.index,
         destIndex: destination.index,
+        type: "close",
+      });
+      setCloseNote("");
+      setShowCloseModal(true);
+      return;
+    }
+
+    // If moving FROM a closed stage (reopen or change closed stage), show reopen confirmation
+    if (
+      fromStage !== toStage &&
+      (CLOSED_STAGES as readonly string[]).includes(fromStage)
+    ) {
+      setPendingDrop({
+        processId: draggableId,
+        fromStage,
+        toStage,
+        sourceIndex: source.index,
+        destIndex: destination.index,
+        type: (CLOSED_STAGES as readonly string[]).includes(toStage) ? "close" : "reopen",
       });
       setCloseNote("");
       setShowCloseModal(true);
@@ -495,7 +516,6 @@ export default function ProcessesPage() {
                                   key={p.id}
                                   draggableId={p.id}
                                   index={index}
-                                  isDragDisabled={!!p.closedAt}
                                 >
                                   {(dragProvided, dragSnapshot) => (
                                     <div
@@ -511,7 +531,7 @@ export default function ProcessesPage() {
                                         dragSnapshot.isDragging
                                           ? "rotate-2 scale-105 border-indigo-300 shadow-lg ring-2 ring-indigo-200/50"
                                           : p.closedAt
-                                            ? "border-slate-200 opacity-50 cursor-default"
+                                            ? "border-slate-200 opacity-60 cursor-grab hover:shadow-md"
                                             : "border-slate-200 cursor-pointer hover:shadow-md"
                                       }`}
                                     >
@@ -582,28 +602,40 @@ export default function ProcessesPage() {
         </div>
       )}
 
-      {/* Close Stage Confirmation Modal */}
+      {/* Stage Change Confirmation Modal (close / reopen) */}
       {showCloseModal && pendingDrop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                pendingDrop.toStage === "positive" ? "bg-emerald-100" : "bg-rose-100"
-              }`}>
-                {pendingDrop.toStage === "positive" ? (
-                  <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              {pendingDrop.type === "reopen" ? (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100">
+                  <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                   </svg>
-                ) : (
-                  <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                  pendingDrop.toStage === "positive" ? "bg-emerald-100" : "bg-rose-100"
+                }`}>
+                  {pendingDrop.toStage === "positive" ? (
+                    <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                  )}
+                </div>
+              )}
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">{t("closeProcess")}</h3>
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {pendingDrop.type === "reopen" ? t("reopenProcess") : t("closeProcess")}
+                </h3>
                 <p className="text-sm text-slate-500">
-                  {t("closeProcessDesc", { stage: PIPELINE_STAGE_LABELS[pendingDrop.toStage] })}
+                  {pendingDrop.type === "reopen"
+                    ? t("reopenProcessDesc", { stage: PIPELINE_STAGE_LABELS[pendingDrop.toStage] })
+                    : t("closeProcessDesc", { stage: PIPELINE_STAGE_LABELS[pendingDrop.toStage] })}
                 </p>
               </div>
             </div>
@@ -617,7 +649,7 @@ export default function ProcessesPage() {
                 value={closeNote}
                 onChange={(e) => setCloseNote(e.target.value)}
                 rows={3}
-                placeholder={t("closeNotePlaceholder")}
+                placeholder={pendingDrop.type === "reopen" ? t("reopenNotePlaceholder") : t("closeNotePlaceholder")}
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
@@ -634,12 +666,16 @@ export default function ProcessesPage() {
                 type="button"
                 onClick={confirmCloseDrop}
                 className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors ${
-                  pendingDrop.toStage === "positive"
-                    ? "bg-emerald-600 hover:bg-emerald-700"
-                    : "bg-rose-600 hover:bg-rose-700"
+                  pendingDrop.type === "reopen"
+                    ? "bg-indigo-600 hover:bg-indigo-700"
+                    : pendingDrop.toStage === "positive"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : "bg-rose-600 hover:bg-rose-700"
                 }`}
               >
-                {pendingDrop.toStage === "positive" ? t("closePositive") : t("closeNegative")}
+                {pendingDrop.type === "reopen"
+                  ? t("reopenConfirm")
+                  : pendingDrop.toStage === "positive" ? t("closePositive") : t("closeNegative")}
               </button>
             </div>
           </div>

@@ -457,6 +457,10 @@
     "closeNotePlaceholder": "Kapatma sebebi veya ek bilgi...",
     "closePositive": "Olumlu Kapat",
     "closeNegative": "Olumsuz Kapat",
+    "reopenProcess": "Süreç Yeniden Açılacak",
+    "reopenProcessDesc": "Bu süreç yeniden açılacak ve {stage} aşamasına taşınacak.",
+    "reopenNotePlaceholder": "Yeniden açma sebebi veya ek bilgi...",
+    "reopenConfirm": "Yeniden Aç",
     "goToProcess": "Sürece Git",
     "processNotFound": "Süreç bulunamadı",
     "detail": {
