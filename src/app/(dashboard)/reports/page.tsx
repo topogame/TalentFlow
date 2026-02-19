@@ -122,7 +122,7 @@ export default function ReportsPage() {
 
   // Custom Report Builder state
   const [crEntity, setCrEntity] = useState<ReportEntityType>("candidates");
-  const [crColumns, setCrColumns] = useState<Set<string>>(new Set());
+  const [crColumns, setCrColumns] = useState<string[]>([]);
   const [crFilters, setCrFilters] = useState<Record<string, string>>({});
   const [crSortField, setCrSortField] = useState("");
   const [crSortOrder, setCrSortOrder] = useState<"asc" | "desc">("desc");
@@ -134,7 +134,7 @@ export default function ReportsPage() {
   // Reset selections when entity type changes
   function handleEntityChange(entity: ReportEntityType) {
     setCrEntity(entity);
-    setCrColumns(new Set());
+    setCrColumns([]);
     setCrFilters({});
     setCrSortField("");
     setCrSortOrder("desc");
@@ -142,25 +142,21 @@ export default function ReportsPage() {
   }
 
   function toggleColumn(key: string) {
-    setCrColumns((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    setCrColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   }
 
   function selectAllColumns() {
-    const all = REPORT_COLUMNS[crEntity].map((c) => c.key);
-    setCrColumns(new Set(all));
+    setCrColumns(REPORT_COLUMNS[crEntity].map((c) => c.key));
   }
 
   function deselectAllColumns() {
-    setCrColumns(new Set());
+    setCrColumns([]);
   }
 
   async function handleCustomExport() {
-    if (crColumns.size === 0) {
+    if (crColumns.length === 0) {
       setCrError(t("minOneColumn"));
       return;
     }
@@ -169,7 +165,7 @@ export default function ReportsPage() {
 
     const body: Record<string, unknown> = {
       entityType: crEntity,
-      columns: Array.from(crColumns),
+      columns: crColumns,
       filters: crFilters,
     };
 
@@ -502,7 +498,7 @@ export default function ReportsPage() {
         <div className="mt-5">
           <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-slate-700">
-              {t("columns")} ({crColumns.size} / {crAvailableColumns.length})
+              {t("columns")} ({crColumns.length} / {crAvailableColumns.length})
             </label>
             <div className="flex gap-2">
               <button
@@ -524,18 +520,18 @@ export default function ReportsPage() {
               <label
                 key={col.key}
                 className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
-                  crColumns.has(col.key)
+                  crColumns.includes(col.key)
                     ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200"
                     : "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
                 }`}
               >
                 <input
                   type="checkbox"
-                  checked={crColumns.has(col.key)}
+                  checked={crColumns.includes(col.key)}
                   onChange={() => toggleColumn(col.key)}
                   className="sr-only"
                 />
-                {crColumns.has(col.key) && (
+                {crColumns.includes(col.key) && (
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
@@ -661,7 +657,7 @@ export default function ReportsPage() {
         <div className="mt-5">
           <button
             onClick={handleCustomExport}
-            disabled={crExporting || crColumns.size === 0}
+            disabled={crExporting || crColumns.length === 0}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

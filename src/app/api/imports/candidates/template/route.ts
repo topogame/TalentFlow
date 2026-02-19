@@ -2,8 +2,8 @@ import { requireAuth } from "@/lib/auth-guard";
 import { createTemplateResponse, TemplateColumn } from "@/lib/excel";
 
 const TEMPLATE_COLUMNS: TemplateColumn[] = [
-  { header: "Ad", key: "firstName", width: 15, required: true, description: "Adayın adı" },
-  { header: "Soyad", key: "lastName", width: 15, required: true, description: "Adayın soyadı" },
+  { header: "Ad", key: "firstName", width: 20, required: true, description: "Adayın adı (sadece ad)" },
+  { header: "Soyad", key: "lastName", width: 20, required: true, description: "Adayın soyadı (sadece soyad)" },
   { header: "E-posta", key: "email", width: 25, description: "E-posta adresi" },
   { header: "Telefon", key: "phone", width: 18, description: "Telefon numarası (ör: +90 555 123 4567)" },
   { header: "LinkedIn URL", key: "linkedinUrl", width: 30, description: "LinkedIn profil linki" },

@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       const candidate = await prisma.candidate.create({
         data: {
           ...cleaned,
+          status: "active",
           createdById: session!.user.id,
           ...(languages && languages.length > 0
             ? { languages: { create: languages } }
