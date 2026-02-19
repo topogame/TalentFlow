@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { JobPostingParseResult } from "@/lib/ai";
 
 type JobPostingPasteProps = {
@@ -9,6 +10,8 @@ type JobPostingPasteProps = {
 };
 
 export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteProps) {
+  const t = useTranslations("components");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +19,7 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
 
   async function handleAnalyze() {
     if (text.trim().length < 30) {
-      setError("İlan metni en az 30 karakter olmalıdır");
+      setError(t("jobPostingPaste.minLength"));
       return;
     }
     setError("");
@@ -31,7 +34,7 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
       const json = await res.json();
 
       if (!json.success) {
-        setError(json.error?.message || "İlan analiz edilemedi");
+        setError(json.error?.message || t("jobPostingPaste.analyzeFailed"));
         return;
       }
 
@@ -39,7 +42,7 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
       setOpen(false);
       setText("");
     } catch {
-      setError("Bir hata oluştu. Lütfen tekrar deneyin.");
+      setError(tc("errorRetry"));
     } finally {
       setLoading(false);
     }
@@ -63,7 +66,7 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
         <svg className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
         </svg>
-        İlan Metni Yapıştır
+        {t("jobPostingPaste.title")}
       </button>
     );
   }
@@ -75,7 +78,7 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
           <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
           </svg>
-          <h3 className="text-sm font-semibold text-slate-900">İlan Metni Yapıştır</h3>
+          <h3 className="text-sm font-semibold text-slate-900">{t("jobPostingPaste.title")}</h3>
         </div>
         <button
           type="button"
@@ -89,19 +92,19 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
       </div>
 
       <div className="mb-3 rounded-lg bg-indigo-100/60 px-3 py-2.5">
-        <p className="text-xs font-medium text-indigo-800 mb-1.5">Nasıl kullanılır?</p>
+        <p className="text-xs font-medium text-indigo-800 mb-1.5">{t("jobPostingPaste.howToUse")}</p>
         <ol className="text-xs text-indigo-700 space-y-0.5 list-decimal list-inside">
-          <li>İş ilanı sayfasını açın (LinkedIn, Kariyer.net, firma sitesi vb.)</li>
-          <li><strong>Ctrl+A</strong> ile tüm metni seçin, <strong>Ctrl+C</strong> ile kopyalayın</li>
-          <li>Aşağıdaki alana <strong>Ctrl+V</strong> ile yapıştırın</li>
-          <li><strong>"AI ile Analiz Et"</strong> butonuna tıklayın — form otomatik dolacak</li>
+          <li>{t("jobPostingPaste.step1")}</li>
+          <li><strong>Ctrl+A</strong> {t("jobPostingPaste.step2")}</li>
+          <li><strong>Ctrl+V</strong> {t("jobPostingPaste.step3")}</li>
+          <li>{t("jobPostingPaste.step4")}</li>
         </ol>
       </div>
 
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="İş ilanı metnini buraya yapıştırın (Ctrl+V)...&#10;&#10;Örnek:&#10;Senior Frontend Developer — TechCorp&#10;Konum: İstanbul (Hibrit)&#10;Maaş: 50.000 - 80.000 TRY&#10;&#10;Aranan Nitelikler:&#10;- 5 yıl deneyim&#10;..."
+        placeholder={t("jobPostingPaste.placeholder")}
         rows={8}
         disabled={loading}
         className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50"
@@ -126,14 +129,14 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
           {loading ? (
             <>
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Analiz Ediliyor...
+              {tc("analyzing")}
             </>
           ) : (
             <>
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
               </svg>
-              AI ile Analiz Et
+              {tc("analyzeWithAI")}
             </>
           )}
         </button>
@@ -143,7 +146,7 @@ export default function JobPostingPaste({ onParsed, disabled }: JobPostingPasteP
           disabled={loading}
           className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
         >
-          İptal
+          {tc("cancel")}
         </button>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   DragDropContext,
   Droppable,
@@ -47,6 +48,10 @@ type PendingDrop = {
 };
 
 export default function ProcessesPage() {
+  const t = useTranslations("processes");
+  const tc = useTranslations("common");
+  const locale = useLocale();
+
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [kanbanData, setKanbanData] = useState<Record<string, ProcessItem[]> | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -111,8 +116,8 @@ export default function ProcessesPage() {
   // Clear drag error after 4 seconds
   useEffect(() => {
     if (!dragError) return;
-    const t = setTimeout(() => setDragError(null), 4000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDragError(null), 4000);
+    return () => clearTimeout(timer);
   }, [dragError]);
 
   function handleSearch(e: React.FormEvent) {
@@ -157,8 +162,8 @@ export default function ProcessesPage() {
     });
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: "Aşama değiştirilemedi" }));
-      throw new Error(err.error || "Aşama değiştirilemedi");
+      const err = await res.json().catch(() => ({ error: t("stageChangeFailed") }));
+      throw new Error(err.error || t("stageChangeFailed"));
     }
   }
 
@@ -208,7 +213,7 @@ export default function ProcessesPage() {
         await applyStageChange(draggableId, toStage);
       } catch (err) {
         rollback();
-        setDragError(err instanceof Error ? err.message : "Aşama değiştirilemedi");
+        setDragError(err instanceof Error ? err.message : t("stageChangeFailed"));
       }
     }
   }
@@ -227,7 +232,7 @@ export default function ProcessesPage() {
       await applyStageChange(processId, toStage, closeNote || undefined);
     } catch (err) {
       rollback();
-      setDragError(err instanceof Error ? err.message : "Süreç kapatılamadı");
+      setDragError(err instanceof Error ? err.message : t("processCloseFailed"));
     }
     setPendingDrop(null);
     setCloseNote("");
@@ -261,8 +266,8 @@ export default function ProcessesPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Süreçler</h1>
-          <p className="mt-1 text-sm text-slate-500">İşe alım süreçlerinizi yönetin</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
         </div>
         <Link
           href="/processes/new"
@@ -271,7 +276,7 @@ export default function ProcessesPage() {
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Yeni Süreç
+          {t("newProcess")}
         </Link>
       </div>
 
@@ -331,7 +336,7 @@ export default function ProcessesPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Aday, firma veya pozisyon ara..."
+              placeholder={t("searchPlaceholder")}
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </div>
@@ -343,7 +348,7 @@ export default function ProcessesPage() {
           onChange={(e) => { setStageFilter(e.target.value); setPage(1); }}
           className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         >
-          <option value="">Tüm Aşamalar</option>
+          <option value="">{t("allStages")}</option>
           {PIPELINE_STAGES.map((s) => (
             <option key={s} value={s}>
               {PIPELINE_STAGE_LABELS[s]}
@@ -357,7 +362,7 @@ export default function ProcessesPage() {
           onChange={(e) => { setAssignedToFilter(e.target.value); setPage(1); }}
           className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
         >
-          <option value="">Tüm Sorumlular</option>
+          <option value="">{t("allAssignees")}</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.firstName} {u.lastName}
@@ -371,7 +376,7 @@ export default function ProcessesPage() {
             onClick={() => { setStageFilter(""); setAssignedToFilter(""); setPage(1); }}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
           >
-            Temizle
+            {tc("clear")}
           </button>
         )}
       </div>
@@ -381,27 +386,27 @@ export default function ProcessesPage() {
         <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           {loading ? (
             <div className="p-12 text-center text-slate-400">
-              <div className="animate-pulse-soft text-lg">Yükleniyor...</div>
+              <div className="animate-pulse-soft text-lg">{tc("loading")}</div>
             </div>
           ) : processes.length === 0 ? (
             <div className="p-12 text-center">
               <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
               </svg>
-              <p className="mt-3 text-sm text-slate-500">Süreç bulunamadı</p>
+              <p className="mt-3 text-sm text-slate-500">{t("notFoundEmpty")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
             <table className="min-w-[800px] divide-y divide-slate-100 md:min-w-full">
               <thead>
                 <tr className="bg-slate-50/80">
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Aday</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Pozisyon</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Firma</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Aşama</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Sorumlu</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Uyum</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Son Güncelleme</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("candidate")}</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("position")}</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("firm")}</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("stage")}</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("assignedTo")}</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("fitness")}</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("lastUpdate")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -440,7 +445,7 @@ export default function ProcessesPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">{renderStars(p.fitnessScore)}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
-                      {new Date(p.updatedAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                      {new Date(p.updatedAt).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" })}
                     </td>
                   </tr>
                 ))}
@@ -454,7 +459,7 @@ export default function ProcessesPage() {
         <div className="mt-6">
           {loading ? (
             <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-400 shadow-sm">
-              <div className="animate-pulse-soft text-lg">Yükleniyor...</div>
+              <div className="animate-pulse-soft text-lg">{tc("loading")}</div>
             </div>
           ) : kanbanData ? (
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -483,7 +488,7 @@ export default function ProcessesPage() {
                           </div>
                           <div className="space-y-3 p-3" style={{ minHeight: 60 }}>
                             {items.length === 0 && !snapshot.isDraggingOver ? (
-                              <p className="py-4 text-center text-xs text-slate-400">Süreç yok</p>
+                              <p className="py-4 text-center text-xs text-slate-400">{t("noProcess")}</p>
                             ) : (
                               items.map((p, index) => (
                                 <Draggable
@@ -553,7 +558,7 @@ export default function ProcessesPage() {
       {viewMode === "list" && pagination && pagination.totalPages > 1 && (
         <div className="mt-5 flex items-center justify-between text-sm">
           <span className="text-slate-500">
-            Toplam {pagination.total} süreç ({pagination.totalPages} sayfa)
+            {tc("totalItemsWithPages", { count: pagination.total, entity: t("title").toLowerCase(), pages: pagination.totalPages })}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -561,7 +566,7 @@ export default function ProcessesPage() {
               disabled={page === 1}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              Önceki
+              {tc("previous")}
             </button>
             <span className="px-2 text-slate-600">
               {page} / {pagination.totalPages}
@@ -571,7 +576,7 @@ export default function ProcessesPage() {
               disabled={page === pagination.totalPages}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              Sonraki
+              {tc("next")}
             </button>
           </div>
         </div>
@@ -596,27 +601,23 @@ export default function ProcessesPage() {
                 )}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Süreç Kapatılacak</h3>
+                <h3 className="text-lg font-semibold text-slate-900">{t("closeProcess")}</h3>
                 <p className="text-sm text-slate-500">
-                  Bu süreç{" "}
-                  <span className="font-medium">
-                    {PIPELINE_STAGE_LABELS[pendingDrop.toStage]}
-                  </span>
-                  {" "}olarak işaretlenecek ve kapatılacak.
+                  {t("closeProcessDesc", { stage: PIPELINE_STAGE_LABELS[pendingDrop.toStage] })}
                 </p>
               </div>
             </div>
 
             <div className="mt-4">
               <label htmlFor="closeNote" className="block text-sm font-medium text-slate-700">
-                Not (opsiyonel)
+                {t("closeNote")}
               </label>
               <textarea
                 id="closeNote"
                 value={closeNote}
                 onChange={(e) => setCloseNote(e.target.value)}
                 rows={3}
-                placeholder="Kapatma sebebi veya ek bilgi..."
+                placeholder={t("closeNotePlaceholder")}
                 className="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
@@ -627,7 +628,7 @@ export default function ProcessesPage() {
                 onClick={cancelCloseDrop}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
               >
-                İptal
+                {tc("cancel")}
               </button>
               <button
                 type="button"
@@ -638,7 +639,7 @@ export default function ProcessesPage() {
                     : "bg-rose-600 hover:bg-rose-700"
                 }`}
               >
-                {pendingDrop.toStage === "positive" ? "Olumlu Kapat" : "Olumsuz Kapat"}
+                {pendingDrop.toStage === "positive" ? t("closePositive") : t("closeNegative")}
               </button>
             </div>
           </div>

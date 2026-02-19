@@ -3,16 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-
-const navItems = [
-  { href: "/portal", label: "Başvurularım" },
-  { href: "/portal/profile", label: "Profilim" },
-  { href: "/portal/emails", label: "E-postalarım" },
-];
+import { useTranslations } from "next-intl";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function PortalHeader() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const t = useTranslations("portal");
+
+  const navItems = [
+    { href: "/portal", label: t("applications") },
+    { href: "/portal/profile", label: t("myProfile") },
+    { href: "/portal/emails", label: t("myEmails") },
+  ];
 
   return (
     <header className="border-b bg-white">
@@ -43,7 +46,8 @@ export function PortalHeader() {
             })}
           </nav>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           {session?.user?.name && (
             <span className="hidden text-sm text-slate-600 sm:block">
               {session.user.name}
@@ -53,7 +57,7 @@ export function PortalHeader() {
             onClick={() => signOut({ callbackUrl: "/portal/login" })}
             className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
           >
-            Çıkış
+            {t("logout")}
           </button>
         </div>
       </div>

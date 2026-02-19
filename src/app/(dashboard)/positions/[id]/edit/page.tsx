@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type FirmOption = { id: string; name: string };
 
@@ -31,6 +32,8 @@ export default function EditPositionPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const t = useTranslations("positions");
+  const tc = useTranslations("common");
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -51,7 +54,7 @@ export default function EditPositionPage() {
         const firmsData = await firmsRes.json();
 
         if (!posData.success) {
-          setError(posData.error?.message || "Pozisyon bulunamadı");
+          setError(posData.error?.message || t("notFoundEmpty"));
           setLoading(false);
           return;
         }
@@ -62,14 +65,14 @@ export default function EditPositionPage() {
           setFirms(firmsData.data);
         }
       } catch {
-        setError("Veriler yüklenirken bir hata oluştu");
+        setError(t("form.loadError"));
       } finally {
         setLoading(false);
       }
     }
 
     fetchData();
-  }, [id]);
+  }, [id, t]);
 
   const inputClass =
     "mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -111,15 +114,15 @@ export default function EditPositionPage() {
       });
       const data = await res.json();
       if (!data.success) {
-        setError(data.error?.message || "Bir hata oluştu");
+        setError(data.error?.message || tc("error"));
         return;
       }
-      setSuccess("Pozisyon başarıyla güncellendi");
+      setSuccess(t("form.updateSuccess"));
       setTimeout(() => {
         router.push(`/positions/${id}`);
       }, 1000);
     } catch {
-      setError("Bir hata oluştu");
+      setError(tc("error"));
     } finally {
       setSaving(false);
     }
@@ -149,7 +152,7 @@ export default function EditPositionPage() {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <p className="text-sm text-slate-500">Yükleniyor...</p>
+          <p className="text-sm text-slate-500">{tc("loading")}</p>
         </div>
       </div>
     );
@@ -159,12 +162,12 @@ export default function EditPositionPage() {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
-          <p className="text-sm text-slate-500">{error || "Pozisyon bulunamadı"}</p>
+          <p className="text-sm text-slate-500">{error || t("notFoundEmpty")}</p>
           <button
             onClick={() => router.back()}
             className="mt-4 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
-            Geri Dön
+            {t("form.goBack")}
           </button>
         </div>
       </div>
@@ -174,8 +177,8 @@ export default function EditPositionPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Pozisyon Düzenle</h1>
-        <p className="mt-1 text-sm text-slate-500">Pozisyon bilgilerini güncelleyin</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t("form.editTitle")}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t("form.editDescription")}</p>
       </div>
 
       {error && (
@@ -187,7 +190,7 @@ export default function EditPositionPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Card 1 - Pozisyon Bilgileri */}
+        {/* Card 1 - Position Information */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
@@ -195,13 +198,13 @@ export default function EditPositionPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Pozisyon Bilgileri</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("form.positionInfo")}</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Firma *</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.firm")} *</label>
               <select name="firmId" required defaultValue={position.firm.id} className={inputClass}>
-                <option value="">Firma seçin</option>
+                <option value="">{t("form.firmSelect")}</option>
                 {firms.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
@@ -210,24 +213,24 @@ export default function EditPositionPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Pozisyon Başlığı *</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.title")} *</label>
               <input name="title" type="text" required defaultValue={position.title} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Departman</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.department")}</label>
               <input name="department" type="text" defaultValue={position.department ?? ""} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Öncelik</label>
+              <label className="block text-sm font-medium text-slate-700">{t("priority")}</label>
               <select name="priority" defaultValue={position.priority} className={inputClass}>
-                <option value="low">Düşük</option>
-                <option value="normal">Normal</option>
-                <option value="high">Yüksek</option>
-                <option value="urgent">Acil</option>
+                <option value="low">{t("priorityLow")}</option>
+                <option value="normal">{t("priorityNormal")}</option>
+                <option value="high">{t("priorityHigh")}</option>
+                <option value="urgent">{t("priorityUrgent")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Gerekli Deneyim (Yıl)</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.requiredExperience")}</label>
               <input
                 name="minExperienceYears"
                 type="number"
@@ -238,38 +241,38 @@ export default function EditPositionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Çalışma Modeli</label>
+              <label className="block text-sm font-medium text-slate-700">{t("workModel")}</label>
               <select name="workModel" defaultValue={position.workModel ?? ""} className={inputClass}>
-                <option value="">Seçiniz</option>
-                <option value="office">Ofis</option>
-                <option value="remote">Uzaktan</option>
-                <option value="hybrid">Hibrit</option>
+                <option value="">{tc("selectOption")}</option>
+                <option value="office">{tc("office")}</option>
+                <option value="remote">{tc("remote")}</option>
+                <option value="hybrid">{tc("hybrid")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Şehir</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.city")}</label>
               <input name="city" type="text" defaultValue={position.city ?? ""} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Sektör Tercihi</label>
-              <input name="sectorPreference" type="text" defaultValue={position.sectorPreference ?? ""} className={inputClass} placeholder="ör. Teknoloji, Finans" />
+              <label className="block text-sm font-medium text-slate-700">{t("form.sectorPreference")}</label>
+              <input name="sectorPreference" type="text" defaultValue={position.sectorPreference ?? ""} className={inputClass} placeholder={t("form.sectorPlaceholder")} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Eğitim Gereksinimi</label>
-              <input name="educationRequirement" type="text" defaultValue={position.educationRequirement ?? ""} className={inputClass} placeholder="ör. Lisans" />
+              <label className="block text-sm font-medium text-slate-700">{t("form.educationRequirement")}</label>
+              <input name="educationRequirement" type="text" defaultValue={position.educationRequirement ?? ""} className={inputClass} placeholder={t("form.educationPlaceholder")} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Dil Gereksinimi</label>
-              <input name="languageRequirement" type="text" defaultValue={position.languageRequirement ?? ""} className={inputClass} placeholder="ör. İngilizce (İleri), Almanca (Orta)" />
+              <label className="block text-sm font-medium text-slate-700">{t("form.languageRequirement")}</label>
+              <input name="languageRequirement" type="text" defaultValue={position.languageRequirement ?? ""} className={inputClass} placeholder={t("form.languagePlaceholder")} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">Gerekli Beceriler</label>
-              <textarea name="requiredSkills" rows={3} defaultValue={position.requiredSkills ?? ""} className={inputClass} placeholder="ör. React, TypeScript, Node.js, SQL" />
+              <label className="block text-sm font-medium text-slate-700">{t("form.requiredSkills")}</label>
+              <textarea name="requiredSkills" rows={3} defaultValue={position.requiredSkills ?? ""} className={inputClass} placeholder={t("form.skillsPlaceholder")} />
             </div>
           </div>
         </div>
 
-        {/* Card 2 - Maaş Aralığı */}
+        {/* Card 2 - Salary Range */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
@@ -277,11 +280,11 @@ export default function EditPositionPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Maaş Aralığı</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("form.salaryRange")}</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Minimum</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.minimum")}</label>
               <input
                 name="salaryMin"
                 type="number"
@@ -291,7 +294,7 @@ export default function EditPositionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Maksimum</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.maximum")}</label>
               <input
                 name="salaryMax"
                 type="number"
@@ -301,7 +304,7 @@ export default function EditPositionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Para Birimi</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.currency")}</label>
               <select name="salaryCurrency" defaultValue={position.salaryCurrency ?? "TRY"} className={inputClass}>
                 <option value="TRY">TRY</option>
                 <option value="USD">USD</option>
@@ -311,7 +314,7 @@ export default function EditPositionPage() {
           </div>
         </div>
 
-        {/* Card 3 - Detaylar */}
+        {/* Card 3 - Details */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50">
@@ -319,11 +322,11 @@ export default function EditPositionPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Detaylar</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("form.details")}</h2>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Açıklama</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.description")}</label>
               <textarea
                 name="description"
                 rows={4}
@@ -332,7 +335,7 @@ export default function EditPositionPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Gereksinimler</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.requirements")}</label>
               <textarea
                 name="requirements"
                 rows={4}
@@ -350,14 +353,14 @@ export default function EditPositionPage() {
             disabled={saving}
             className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50"
           >
-            {saving ? "Kaydediliyor..." : "Güncelle"}
+            {saving ? tc("saving") : tc("update")}
           </button>
           <button
             type="button"
             onClick={() => router.push(`/positions/${id}`)}
             className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
-            İptal
+            {tc("cancel")}
           </button>
         </div>
       </form>

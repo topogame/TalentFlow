@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const LANGUAGE_LEVEL_LABELS: Record<string, string> = {
-  beginner: "Başlangıç",
-  intermediate: "Orta",
-  advanced: "İleri",
-  native: "Ana Dil",
-};
+import { useTranslations } from "next-intl";
 
 type Profile = {
   firstName: string;
@@ -37,6 +31,9 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
 }
 
 export default function PortalProfile() {
+  const t = useTranslations("portal");
+  const tc = useTranslations("common");
+  const tl = useTranslations("constants.languageLevels");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,26 +57,26 @@ export default function PortalProfile() {
   if (!profile) {
     return (
       <div className="rounded-lg border bg-white p-8 text-center">
-        <p className="text-sm text-slate-500">Profil bilgisi bulunamadı.</p>
+        <p className="text-sm text-slate-500">{t("profileNotFound")}</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-slate-900">Profilim</h1>
+      <h1 className="mb-6 text-xl font-bold text-slate-900">{t("myProfile")}</h1>
 
       <div className="space-y-6">
         {/* Personal Info */}
         <div className="rounded-lg border bg-white p-6">
           <h2 className="mb-4 text-sm font-semibold text-slate-700">
-            Kişisel Bilgiler
+            {t("personalInfo")}
           </h2>
-          <InfoRow label="Ad Soyad" value={`${profile.firstName} ${profile.lastName}`} />
-          <InfoRow label="E-posta" value={profile.email} />
-          <InfoRow label="Telefon" value={profile.phone} />
+          <InfoRow label={t("fullName")} value={`${profile.firstName} ${profile.lastName}`} />
+          <InfoRow label={tc("email")} value={profile.email} />
+          <InfoRow label={tc("phone")} value={profile.phone} />
           <InfoRow
-            label="Konum"
+            label={tc("location")}
             value={
               profile.city && profile.country
                 ? `${profile.city}, ${profile.country}`
@@ -91,15 +88,15 @@ export default function PortalProfile() {
         {/* Professional Info */}
         <div className="rounded-lg border bg-white p-6">
           <h2 className="mb-4 text-sm font-semibold text-slate-700">
-            Profesyonel Bilgiler
+            {t("professionalInfo")}
           </h2>
-          <InfoRow label="Mevcut Pozisyon" value={profile.currentTitle} />
-          <InfoRow label="Sektör" value={profile.currentSector} />
+          <InfoRow label={t("currentPosition")} value={profile.currentTitle} />
+          <InfoRow label={t("industry")} value={profile.currentSector} />
           <InfoRow
-            label="Toplam Deneyim"
+            label={t("totalExperience")}
             value={
               profile.totalExperienceYears != null
-                ? `${profile.totalExperienceYears} yıl`
+                ? `${profile.totalExperienceYears} ${tc("year")}`
                 : null
             }
           />
@@ -107,17 +104,17 @@ export default function PortalProfile() {
 
         {/* Education */}
         <div className="rounded-lg border bg-white p-6">
-          <h2 className="mb-4 text-sm font-semibold text-slate-700">Eğitim</h2>
-          <InfoRow label="Eğitim Seviyesi" value={profile.educationLevel} />
-          <InfoRow label="Üniversite" value={profile.universityName} />
-          <InfoRow label="Bölüm" value={profile.universityDepartment} />
+          <h2 className="mb-4 text-sm font-semibold text-slate-700">{t("education")}</h2>
+          <InfoRow label={t("educationLevel")} value={profile.educationLevel} />
+          <InfoRow label={t("university")} value={profile.universityName} />
+          <InfoRow label={t("department")} value={profile.universityDepartment} />
         </div>
 
         {/* Languages */}
         {profile.languages.length > 0 && (
           <div className="rounded-lg border bg-white p-6">
             <h2 className="mb-4 text-sm font-semibold text-slate-700">
-              Diller
+              {t("languages")}
             </h2>
             <div className="space-y-2">
               {profile.languages.map((lang, i) => (
@@ -127,7 +124,7 @@ export default function PortalProfile() {
                 >
                   <span className="text-sm text-slate-900">{lang.language}</span>
                   <span className="text-sm text-slate-500">
-                    {LANGUAGE_LEVEL_LABELS[lang.level] || lang.level}
+                    {tl.has(lang.level) ? tl(lang.level) : lang.level}
                   </span>
                 </div>
               ))}

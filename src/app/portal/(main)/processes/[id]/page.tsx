@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { PORTAL_STAGE_LABELS, INTERVIEW_TYPE_LABELS } from "@/lib/constants";
 
 type Interview = {
@@ -35,14 +36,17 @@ const STAGE_COLORS: Record<string, string> = {
   on_hold: "bg-amber-100 text-amber-700",
 };
 
-const WORK_MODEL_LABELS: Record<string, string> = {
-  office: "Ofis",
-  remote: "Uzaktan",
-  hybrid: "Hibrit",
+const WORK_MODEL_KEYS: Record<string, string> = {
+  office: "office",
+  remote: "remote",
+  hybrid: "hybrid",
 };
 
 export default function PortalProcessDetail() {
   const { id } = useParams<{ id: string }>();
+  const t = useTranslations("portal");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const [process, setProcess] = useState<ProcessDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -54,10 +58,10 @@ export default function PortalProcessDetail() {
         if (data.success) {
           setProcess(data.data);
         } else {
-          setError(data.message || "Süreç bulunamadı");
+          setError(data.message || t("processNotFound"));
         }
       })
-      .catch(() => setError("Bir hata oluştu"))
+      .catch(() => setError(tc("error")))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -72,9 +76,9 @@ export default function PortalProcessDetail() {
   if (error || !process) {
     return (
       <div className="rounded-lg border bg-white p-8 text-center">
-        <p className="text-sm text-red-600">{error || "Süreç bulunamadı"}</p>
+        <p className="text-sm text-red-600">{error || t("processNotFound")}</p>
         <Link href="/portal" className="mt-4 inline-block text-sm text-slate-600 hover:text-slate-900">
-          &larr; Başvurularıma Dön
+          &larr; {t("backToApplications")}
         </Link>
       </div>
     );
@@ -83,7 +87,7 @@ export default function PortalProcessDetail() {
   return (
     <div>
       <Link href="/portal" className="mb-4 inline-flex items-center text-sm text-slate-500 hover:text-slate-700">
-        &larr; Başvurularıma Dön
+        &larr; {t("backToApplications")}
       </Link>
 
       {/* Header */}
@@ -98,12 +102,13 @@ export default function PortalProcessDetail() {
               {process.position.city && <span>{process.position.city}</span>}
               {process.position.workModel && (
                 <span>
-                  {WORK_MODEL_LABELS[process.position.workModel] ||
-                    process.position.workModel}
+                  {WORK_MODEL_KEYS[process.position.workModel]
+                    ? tc(WORK_MODEL_KEYS[process.position.workModel])
+                    : process.position.workModel}
                 </span>
               )}
               <span>
-                Başvuru: {new Date(process.createdAt).toLocaleDateString("tr-TR")}
+                {t("application")} {new Date(process.createdAt).toLocaleDateString(locale)}
               </span>
             </div>
           </div>
@@ -120,12 +125,12 @@ export default function PortalProcessDetail() {
       {/* Interviews */}
       <div className="mt-6">
         <h2 className="mb-3 text-sm font-semibold text-slate-700">
-          Mülakatlar
+          {t("interviews")}
         </h2>
         {process.interviews.length === 0 ? (
           <div className="rounded-lg border bg-white p-6 text-center">
             <p className="text-sm text-slate-500">
-              Henüz planlanmış mülakat bulunmuyor.
+              {t("noInterviews")}
             </p>
           </div>
         ) : (
@@ -141,14 +146,14 @@ export default function PortalProcessDetail() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium text-slate-900">
-                        {date.toLocaleDateString("tr-TR", {
+                        {date.toLocaleDateString(locale, {
                           weekday: "long",
                           day: "numeric",
                           month: "long",
                           year: "numeric",
                         })}
                         {" "}
-                        {date.toLocaleTimeString("tr-TR", {
+                        {date.toLocaleTimeString(locale, {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -157,7 +162,7 @@ export default function PortalProcessDetail() {
                         <span>
                           {INTERVIEW_TYPE_LABELS[interview.type] || interview.type}
                         </span>
-                        <span>{interview.durationMinutes} dk</span>
+                        <span>{interview.durationMinutes} {tc("minutes")}</span>
                         {interview.location && (
                           <span>{interview.location}</span>
                         )}
@@ -173,10 +178,10 @@ export default function PortalProcessDetail() {
                       }`}
                     >
                       {interview.isCompleted
-                        ? "Tamamlandı"
+                        ? tc("completed")
                         : isPast
-                          ? "Bekliyor"
-                          : "Planlandı"}
+                          ? tc("waiting")
+                          : tc("scheduled")}
                     </span>
                   </div>
                   {interview.meetingLink && !interview.isCompleted && !isPast && (
@@ -186,7 +191,7 @@ export default function PortalProcessDetail() {
                       rel="noopener noreferrer"
                       className="mt-3 inline-flex items-center gap-1 rounded-md bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
                     >
-                      Toplantıya Katıl &rarr;
+                      {t("joinMeeting")}
                     </a>
                   )}
                 </div>

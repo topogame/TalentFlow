@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { AUDIT_ACTION_LABELS, AUDIT_ENTITY_TYPE_LABELS, AUDIT_ENTITY_TYPES } from "@/lib/constants";
 
 type User = {
@@ -58,6 +59,9 @@ const emptyFilters: AuditFilters = {
 type Tab = "users" | "audit";
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
 
@@ -133,13 +137,13 @@ export default function SettingsPage() {
   if (!isAdmin) {
     return (
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Ayarlar</h1>
+        <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
           </svg>
           <p className="mt-3 text-sm text-slate-500">
-            Sistem ayarlarını yalnızca admin kullanıcılar yönetebilir.
+            {t("adminOnly")}
           </p>
         </div>
       </div>
@@ -174,7 +178,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error?.message || "Bir hata oluştu");
+        setError(data.error?.message || tc("error"));
         return;
       }
 
@@ -246,8 +250,8 @@ export default function SettingsPage() {
     <div>
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Ayarlar</h1>
-        <p className="mt-1 text-sm text-slate-500">Sistem yönetimi ve denetim kayıtları</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
       </div>
 
       {/* Tabs */}
@@ -264,7 +268,7 @@ export default function SettingsPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
             </svg>
-            Kullanıcı Yönetimi
+            {t("userManagement")}
           </span>
         </button>
         <button
@@ -279,7 +283,7 @@ export default function SettingsPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
             </svg>
-            Denetim Kayıtları
+            {t("auditLogs")}
           </span>
         </button>
       </div>
@@ -288,7 +292,7 @@ export default function SettingsPage() {
       {activeTab === "users" && (
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Kullanıcılar</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("users")}</h2>
             {!showForm && (
               <button
                 onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); setError(""); }}
@@ -297,7 +301,7 @@ export default function SettingsPage() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                Yeni Kullanıcı
+                {t("newUser")}
               </button>
             )}
           </div>
@@ -311,7 +315,7 @@ export default function SettingsPage() {
                   </svg>
                 </div>
                 <h2 className="text-lg font-semibold text-slate-900">
-                  {editingId ? "Kullanıcı Düzenle" : "Yeni Kullanıcı"}
+                  {editingId ? t("editUser") : t("newUser")}
                 </h2>
               </div>
 
@@ -321,34 +325,34 @@ export default function SettingsPage() {
 
               <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Ad</label>
+                  <label className="block text-sm font-medium text-slate-700">{tc("name")}</label>
                   <input type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Soyad</label>
+                  <label className="block text-sm font-medium text-slate-700">{tc("surname")}</label>
                   <input type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">E-posta</label>
+                  <label className="block text-sm font-medium text-slate-700">{tc("email")}</label>
                   <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">{editingId ? "Yeni Şifre (boş bırakılabilir)" : "Şifre"}</label>
+                  <label className="block text-sm font-medium text-slate-700">{editingId ? t("newPasswordHint") : tc("password")}</label>
                   <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editingId} minLength={8} className={inputClass} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700">Rol</label>
+                  <label className="block text-sm font-medium text-slate-700">{tc("role")}</label>
                   <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as "admin" | "consultant" })} className={inputClass}>
-                    <option value="consultant">Danışman</option>
-                    <option value="admin">Admin</option>
+                    <option value="consultant">{tc("consultant")}</option>
+                    <option value="admin">{tc("admin")}</option>
                   </select>
                 </div>
                 <div className="flex items-end gap-3 sm:col-span-2">
                   <button type="submit" disabled={saving} className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50">
-                    {saving ? "Kaydediliyor..." : editingId ? "Güncelle" : "Oluştur"}
+                    {saving ? tc("saving") : editingId ? tc("update") : tc("create")}
                   </button>
                   <button type="button" onClick={handleCancel} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50">
-                    İptal
+                    {tc("cancel")}
                   </button>
                 </div>
               </form>
@@ -357,25 +361,25 @@ export default function SettingsPage() {
 
           <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             {loading ? (
-              <div className="p-12 text-center text-slate-400"><div className="animate-pulse-soft text-lg">Yükleniyor...</div></div>
+              <div className="p-12 text-center text-slate-400"><div className="animate-pulse-soft text-lg">{tc("loading")}</div></div>
             ) : users.length === 0 ? (
               <div className="p-12 text-center">
                 <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                 </svg>
-                <p className="mt-3 text-sm text-slate-500">Henüz kullanıcı yok</p>
+                <p className="mt-3 text-sm text-slate-500">{t("noUsers")}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
               <table className="min-w-[750px] divide-y divide-slate-100 md:min-w-full">
                 <thead>
                   <tr className="bg-slate-50/80">
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Kullanıcı</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">E-posta</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Rol</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Durum</th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Son Giriş</th>
-                    <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">İşlemler</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("user")}</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("email")}</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("role")}</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("status")}</th>
+                    <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{t("lastLogin")}</th>
+                    <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("multipleActions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -392,22 +396,22 @@ export default function SettingsPage() {
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">{user.email}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${user.role === "admin" ? "bg-violet-50 text-violet-700" : "bg-indigo-50 text-indigo-700"}`}>
-                          {user.role === "admin" ? "Admin" : "Danışman"}
+                          {user.role === "admin" ? tc("admin") : tc("consultant")}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${user.isActive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-                          {user.isActive ? "Aktif" : "Pasif"}
+                          {user.isActive ? tc("active") : tc("passive")}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-                        {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                        {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                        <button onClick={() => handleEdit(user)} className="mr-3 font-medium text-indigo-600 transition-colors hover:text-indigo-700">Düzenle</button>
+                        <button onClick={() => handleEdit(user)} className="mr-3 font-medium text-indigo-600 transition-colors hover:text-indigo-700">{tc("edit")}</button>
                         {user.id !== session?.user?.id && (
                           <button onClick={() => handleToggleActive(user)} className={`font-medium transition-colors ${user.isActive ? "text-rose-600 hover:text-rose-700" : "text-emerald-600 hover:text-emerald-700"}`}>
-                            {user.isActive ? "Devre Dışı" : "Aktifleştir"}
+                            {user.isActive ? t("deactivate") : t("activate")}
                           </button>
                         )}
                       </td>
@@ -425,41 +429,41 @@ export default function SettingsPage() {
       {activeTab === "audit" && (
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Denetim Kayıtları</h2>
-            <span className="text-sm text-slate-500">{auditTotal} kayıt</span>
+            <h2 className="text-lg font-semibold text-slate-900">{t("auditLogs")}</h2>
+            <span className="text-sm text-slate-500">{t("records", { count: auditTotal })}</span>
           </div>
 
           {/* Filters */}
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Varlık Tipi</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("entityType")}</label>
                 <select
                   value={auditFilters.entityType}
                   onChange={(e) => handleAuditFilterChange("entityType", e.target.value)}
                   className={filterInputClass}
                 >
-                  <option value="">Tümü</option>
-                  {AUDIT_ENTITY_TYPES.map((t) => (
-                    <option key={t} value={t}>{AUDIT_ENTITY_TYPE_LABELS[t] || t}</option>
+                  <option value="">{tc("all")}</option>
+                  {AUDIT_ENTITY_TYPES.map((entityType) => (
+                    <option key={entityType} value={entityType}>{AUDIT_ENTITY_TYPE_LABELS[entityType] || entityType}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">İşlem</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("action")}</label>
                 <select
                   value={auditFilters.action}
                   onChange={(e) => handleAuditFilterChange("action", e.target.value)}
                   className={filterInputClass}
                 >
-                  <option value="">Tümü</option>
+                  <option value="">{tc("all")}</option>
                   {Object.entries(AUDIT_ACTION_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Başlangıç</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("startDate")}</label>
                 <input
                   type="date"
                   value={auditFilters.dateFrom}
@@ -468,7 +472,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">Bitiş</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500">{t("endDate")}</label>
                 <input
                   type="date"
                   value={auditFilters.dateTo}
@@ -481,7 +485,7 @@ export default function SettingsPage() {
                   onClick={handleClearAuditFilters}
                   className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
                 >
-                  Temizle
+                  {tc("clear")}
                 </button>
               </div>
             </div>
@@ -491,14 +495,14 @@ export default function SettingsPage() {
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             {auditLoading ? (
               <div className="p-12 text-center text-slate-400">
-                <div className="animate-pulse-soft text-lg">Yükleniyor...</div>
+                <div className="animate-pulse-soft text-lg">{tc("loading")}</div>
               </div>
             ) : auditLogs.length === 0 ? (
               <div className="p-12 text-center">
                 <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
                 </svg>
-                <p className="mt-3 text-sm text-slate-500">Denetim kaydı bulunamadı</p>
+                <p className="mt-3 text-sm text-slate-500">{t("noAuditLogs")}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -506,11 +510,11 @@ export default function SettingsPage() {
                 <thead>
                   <tr className="bg-slate-50/80">
                     <th className="w-8 px-3 py-3.5"></th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tarih</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Kullanıcı</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">İşlem</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Varlık Tipi</th>
-                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Varlık ID</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("date")}</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("user")}</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{t("action")}</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{t("entityType")}</th>
+                    <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{t("entityId")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -533,7 +537,7 @@ export default function SettingsPage() {
                           </svg>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
-                          {new Date(log.createdAt).toLocaleDateString("tr-TR", {
+                          {new Date(log.createdAt).toLocaleDateString(locale, {
                             day: "2-digit",
                             month: "2-digit",
                             year: "numeric",
@@ -563,11 +567,11 @@ export default function SettingsPage() {
                               const ch = log.changes as { before?: unknown; after?: unknown };
                               return (
                                 <div className="space-y-3">
-                                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Değişiklikler</p>
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("changes")}</p>
                                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                                     {ch.before ? (
                                       <div>
-                                        <p className="mb-1 text-xs font-medium text-rose-600">Önceki</p>
+                                        <p className="mb-1 text-xs font-medium text-rose-600">{tc("before")}</p>
                                         <pre className="overflow-auto rounded-lg bg-white p-3 text-xs text-slate-700 ring-1 ring-slate-200">
                                           {JSON.stringify(ch.before, null, 2)}
                                         </pre>
@@ -575,7 +579,7 @@ export default function SettingsPage() {
                                     ) : null}
                                     {ch.after ? (
                                       <div>
-                                        <p className="mb-1 text-xs font-medium text-emerald-600">Sonraki</p>
+                                        <p className="mb-1 text-xs font-medium text-emerald-600">{tc("after")}</p>
                                         <pre className="overflow-auto rounded-lg bg-white p-3 text-xs text-slate-700 ring-1 ring-slate-200">
                                           {JSON.stringify(ch.after, null, 2)}
                                         </pre>
@@ -585,10 +589,10 @@ export default function SettingsPage() {
                                 </div>
                               );
                             })() : (
-                              <p className="text-sm text-slate-400">Değişiklik detayı bulunmuyor</p>
+                              <p className="text-sm text-slate-400">{tc("noChangeDetail")}</p>
                             )}
                             <div className="mt-3 text-xs text-slate-400">
-                              <span className="font-medium">Tam ID:</span> {log.entityId}
+                              <span className="font-medium">{tc("fullId")}:</span> {log.entityId}
                             </div>
                           </td>
                         </tr>
@@ -605,7 +609,7 @@ export default function SettingsPage() {
           {totalAuditPages > 1 && (
             <div className="mt-4 flex items-center justify-between">
               <p className="text-sm text-slate-500">
-                Sayfa {auditPage} / {totalAuditPages}
+                {t("page", { page: auditPage, totalPages: totalAuditPages })}
               </p>
               <div className="flex gap-2">
                 <button
@@ -613,14 +617,14 @@ export default function SettingsPage() {
                   disabled={auditPage === 1}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
                 >
-                  Önceki
+                  {tc("previous")}
                 </button>
                 <button
                   onClick={() => setAuditPage((p) => Math.min(totalAuditPages, p + 1))}
                   disabled={auditPage === totalAuditPages}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
                 >
-                  Sonraki
+                  {tc("next")}
                 </button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   BarChart,
   Bar,
@@ -57,53 +58,60 @@ const STATUS_COLORS: Record<string, string> = {
   passive: "#94a3b8",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "Aktif",
-  passive: "Pasif",
-};
-
 const TREND_COLORS = {
   candidate: "#3b82f6",
   process: "#a855f7",
   placement: "#10b981",
 };
 
-const TREND_LABELS: Record<string, string> = {
-  candidate: "Yeni Adaylar",
-  process: "Yeni Süreçler",
-  placement: "Yerleştirmeler",
-};
-
 // ─── Date Presets ───
 
 type DatePreset = { label: string; from: Date | null; to: Date | null };
 
-function getPresets(): DatePreset[] {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const start3m = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-  const start6m = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-  const startOfYear = new Date(now.getFullYear(), 0, 1);
-  return [
-    { label: "Bu Ay", from: startOfMonth, to: now },
-    { label: "Son 3 Ay", from: start3m, to: now },
-    { label: "Son 6 Ay", from: start6m, to: now },
-    { label: "Bu Yıl", from: startOfYear, to: now },
-    { label: "Tümü", from: null, to: null },
-  ];
-}
-
 // ─── Page ───
 
-const ENTITY_OPTIONS: { value: ReportEntityType; label: string }[] = [
-  { value: "candidates", label: "Adaylar" },
-  { value: "firms", label: "Firmalar" },
-  { value: "positions", label: "Pozisyonlar" },
-  { value: "processes", label: "Süreçler" },
-  { value: "interviews", label: "Mülakatlar" },
-];
+// ENTITY_OPTIONS moved inside component to access translations
 
 export default function ReportsPage() {
+  const t = useTranslations("reports");
+  const tc = useTranslations("common");
+  const locale = useLocale();
+
+  const STATUS_LABELS: Record<string, string> = {
+    active: tc("active"),
+    passive: tc("passive"),
+  };
+
+  const TREND_LABELS: Record<string, string> = {
+    candidate: t("trendNewCandidates"),
+    process: t("trendNewProcesses"),
+    placement: t("trendPlacements"),
+  };
+
+  const tn = useTranslations("nav");
+  const ENTITY_OPTIONS: { value: ReportEntityType; label: string }[] = [
+    { value: "candidates", label: tn("candidates") },
+    { value: "firms", label: tn("firms") },
+    { value: "positions", label: tn("positions") },
+    { value: "processes", label: tn("processes") },
+    { value: "interviews", label: t("interviews") },
+  ];
+
+  function getPresets(): DatePreset[] {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const start3m = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const start6m = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    return [
+      { label: t("thisMonth"), from: startOfMonth, to: now },
+      { label: t("last3Months"), from: start3m, to: now },
+      { label: t("last6Months"), from: start6m, to: now },
+      { label: t("thisYear"), from: startOfYear, to: now },
+      { label: tc("all"), from: null, to: null },
+    ];
+  }
+
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePreset, setActivePreset] = useState(4); // "Tümü"
@@ -153,7 +161,7 @@ export default function ReportsPage() {
 
   async function handleCustomExport() {
     if (crColumns.size === 0) {
-      setCrError("En az bir sütun seçin");
+      setCrError(t("minOneColumn"));
       return;
     }
     setCrError("");
@@ -188,10 +196,10 @@ export default function ReportsPage() {
         URL.revokeObjectURL(url);
       } else {
         const json = await res.json();
-        setCrError(json.error?.message || "Rapor oluşturulamadı");
+        setCrError(json.error?.message || t("reportFailed"));
       }
     } catch {
-      setCrError("Bağlantı hatası");
+      setCrError(t("connectionError"));
     } finally {
       setCrExporting(false);
     }
@@ -246,7 +254,7 @@ export default function ReportsPage() {
     ? (() => {
         const grouped: Record<string, { month: string; candidate: number; process: number; placement: number }> = {};
         for (const item of data.monthlyTrends) {
-          const key = new Date(item.month).toLocaleDateString("tr-TR", { year: "numeric", month: "short" });
+          const key = new Date(item.month).toLocaleDateString(locale, { year: "numeric", month: "short" });
           if (!grouped[key]) grouped[key] = { month: key, candidate: 0, process: 0, placement: 0 };
           const trendKey = item.type as "candidate" | "process" | "placement";
           grouped[key][trendKey] = item.count;
@@ -268,8 +276,8 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Raporlar</h1>
-          <p className="mt-1 text-sm text-slate-500">Performans ve istatistik raporları</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
         </div>
       </div>
 
@@ -294,11 +302,11 @@ export default function ReportsPage() {
       <div className="mt-4 flex flex-wrap gap-2">
         {(
           [
-            { type: "candidates" as const, label: "Adaylar" },
-            { type: "processes" as const, label: "Süreçler" },
-            { type: "positions" as const, label: "Pozisyonlar" },
-            { type: "firms" as const, label: "Firmalar" },
-            { type: "interviews" as const, label: "Mülakatlar" },
+            { type: "candidates" as const, label: tn("candidates") },
+            { type: "processes" as const, label: tn("processes") },
+            { type: "positions" as const, label: tn("positions") },
+            { type: "firms" as const, label: tn("firms") },
+            { type: "interviews" as const, label: t("interviews") },
           ] as const
         ).map((item) => (
           <button
@@ -310,18 +318,18 @@ export default function ReportsPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            {exporting === item.type ? "İndiriliyor..." : `${item.label} Excel`}
+            {exporting === item.type ? t("downloading") : `${item.label} ${t("excel")}`}
           </button>
         ))}
       </div>
 
       {loading ? (
         <div className="mt-12 flex justify-center">
-          <p className="text-sm text-slate-500">Yükleniyor...</p>
+          <p className="text-sm text-slate-500">{tc("loading")}</p>
         </div>
       ) : !data ? (
         <div className="mt-12 flex justify-center">
-          <p className="text-sm text-slate-500">Veri yüklenemedi</p>
+          <p className="text-sm text-slate-500">{t("dataLoadFailed")}</p>
         </div>
       ) : (
         <div className="mt-6 space-y-6">
@@ -329,11 +337,11 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Pipeline Distribution */}
             <div className="col-span-2 rounded-xl border border-slate-200 bg-white p-5">
-              <h3 className="text-sm font-semibold text-slate-700">Pipeline Dağılımı</h3>
+              <h3 className="text-sm font-semibold text-slate-700">{t("pipelineDistribution")}</h3>
               <div className="mt-4 h-64">
                 {pipelineData.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                    Veri bulunamadı
+                    {t("noDataFound")}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -341,7 +349,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                       <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value) => [value, "Süreç"]} />
+                      <Tooltip formatter={(value) => [value, tc("process")]} />
                       <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                         {pipelineData.map((entry) => (
                           <Cell key={entry.stage} fill={STAGE_CHART_COLORS[entry.stage] || "#94a3b8"} />
@@ -355,11 +363,11 @@ export default function ReportsPage() {
 
             {/* Candidate Status Pie */}
             <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <h3 className="text-sm font-semibold text-slate-700">Aday Durum Dağılımı</h3>
+              <h3 className="text-sm font-semibold text-slate-700">{t("candidateStatusDist")}</h3>
               <div className="mt-4 h-64">
                 {data.candidatesByStatus.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                    Veri bulunamadı
+                    {t("noDataFound")}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -391,7 +399,7 @@ export default function ReportsPage() {
 
           {/* Row 2: Monthly Trends */}
           <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h3 className="text-sm font-semibold text-slate-700">Aylık Trendler</h3>
+            <h3 className="text-sm font-semibold text-slate-700">{t("monthlyTrends")}</h3>
             <div className="mt-4 h-72">
               {trendData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-slate-400">
@@ -418,11 +426,11 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Firm Activity */}
             <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <h3 className="text-sm font-semibold text-slate-700">Firma Aktivitesi (Top 10)</h3>
+              <h3 className="text-sm font-semibold text-slate-700">{t("firmActivity")}</h3>
               <div className="mt-4 h-64">
                 {data.firmActivity.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                    Veri bulunamadı
+                    {t("noDataFound")}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -430,7 +438,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                       <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
                       <YAxis type="category" dataKey="firmName" tick={{ fontSize: 11 }} width={120} />
-                      <Tooltip formatter={(value) => [value, "Süreç"]} />
+                      <Tooltip formatter={(value) => [value, tc("process")]} />
                       <Bar dataKey="processCount" fill="#6366f1" radius={[0, 6, 6, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -440,11 +448,11 @@ export default function ReportsPage() {
 
             {/* Consultant Performance */}
             <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <h3 className="text-sm font-semibold text-slate-700">Danışman Performansı</h3>
+              <h3 className="text-sm font-semibold text-slate-700">{t("consultantPerformance")}</h3>
               <div className="mt-4 h-64">
                 {data.consultantPerformance.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                    Veri bulunamadı
+                    {t("noDataFound")}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -452,7 +460,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                       <XAxis dataKey="userName" tick={{ fontSize: 11 }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value) => [value, "Süreç"]} />
+                      <Tooltip formatter={(value) => [value, tc("process")]} />
                       <Bar dataKey="processCount" fill="#a855f7" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -465,14 +473,14 @@ export default function ReportsPage() {
 
       {/* ─── Custom Report Builder ─── */}
       <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-bold text-slate-900">Özel Rapor Oluşturucu</h2>
+        <h2 className="text-lg font-bold text-slate-900">{t("customReportBuilder")}</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Veri tipini seçin, sütunları ve filtreleri belirleyin, ardından raporu Excel olarak indirin.
+          {t("customReportDesc")}
         </p>
 
         {/* Entity Type */}
         <div className="mt-5">
-          <label className="block text-sm font-medium text-slate-700">Veri Tipi</label>
+          <label className="block text-sm font-medium text-slate-700">{t("dataType")}</label>
           <div className="mt-2 flex flex-wrap gap-2">
             {ENTITY_OPTIONS.map((opt) => (
               <button
@@ -494,20 +502,20 @@ export default function ReportsPage() {
         <div className="mt-5">
           <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-slate-700">
-              Sütunlar ({crColumns.size} / {crAvailableColumns.length})
+              {t("columns")} ({crColumns.size} / {crAvailableColumns.length})
             </label>
             <div className="flex gap-2">
               <button
                 onClick={selectAllColumns}
                 className="text-xs text-indigo-600 hover:text-indigo-800"
               >
-                Tümünü Seç
+                {t("selectAll")}
               </button>
               <button
                 onClick={deselectAllColumns}
                 className="text-xs text-slate-500 hover:text-slate-700"
               >
-                Temizle
+                {tc("clear")}
               </button>
             </div>
           </div>
@@ -541,7 +549,7 @@ export default function ReportsPage() {
         {/* Filters */}
         {crAvailableFilters.length > 0 && (
           <div className="mt-5">
-            <label className="block text-sm font-medium text-slate-700">Filtreler</label>
+            <label className="block text-sm font-medium text-slate-700">{t("filters")}</label>
             <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {crAvailableFilters.map((filter) => (
                 <div key={filter.key}>
@@ -559,7 +567,7 @@ export default function ReportsPage() {
                       }
                       className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
                     >
-                      <option value="">Tümü</option>
+                      <option value="">{tc("all")}</option>
                       {filter.options?.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
@@ -592,13 +600,13 @@ export default function ReportsPage() {
         <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Sort Field */}
           <div>
-            <label className="block text-xs text-slate-500">Sıralama</label>
+            <label className="block text-xs text-slate-500">{tc("sortBy")}</label>
             <select
               value={crSortField}
               onChange={(e) => setCrSortField(e.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
             >
-              <option value="">Varsayılan</option>
+              <option value="">{t("default")}</option>
               {crAvailableColumns
                 .filter((c) => !c.relation || c.relation === "_count")
                 .map((col) => (
@@ -611,20 +619,20 @@ export default function ReportsPage() {
 
           {/* Sort Order */}
           <div>
-            <label className="block text-xs text-slate-500">Sıralama Yönü</label>
+            <label className="block text-xs text-slate-500">{t("sortDirection")}</label>
             <select
               value={crSortOrder}
               onChange={(e) => setCrSortOrder(e.target.value as "asc" | "desc")}
               className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700"
             >
-              <option value="desc">Azalan</option>
-              <option value="asc">Artan</option>
+              <option value="desc">{t("descending")}</option>
+              <option value="asc">{t("ascending")}</option>
             </select>
           </div>
 
           {/* Date From */}
           <div>
-            <label className="block text-xs text-slate-500">Başlangıç Tarihi</label>
+            <label className="block text-xs text-slate-500">{t("startDate")}</label>
             <input
               type="date"
               value={crDateFrom}
@@ -635,7 +643,7 @@ export default function ReportsPage() {
 
           {/* Date To */}
           <div>
-            <label className="block text-xs text-slate-500">Bitiş Tarihi</label>
+            <label className="block text-xs text-slate-500">{t("endDate")}</label>
             <input
               type="date"
               value={crDateTo}
@@ -659,10 +667,10 @@ export default function ReportsPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            {crExporting ? "Rapor Oluşturuluyor..." : "Raporu İndir"}
+            {crExporting ? t("generatingReport") : t("downloadReport")}
           </button>
           <span className="ml-3 text-xs text-slate-400">
-            Maks. 5.000 satır
+            {t("maxRows")}
           </span>
         </div>
       </div>

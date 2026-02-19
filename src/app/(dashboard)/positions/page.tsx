@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type Position = {
   id: string;
@@ -22,23 +23,10 @@ type Position = {
 
 type Pagination = { page: number; limit: number; total: number; totalPages: number };
 
-const STATUS_LABELS: Record<string, string> = {
-  open: "Açık",
-  on_hold: "Beklemede",
-  closed: "Kapalı",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   open: "bg-emerald-50 text-emerald-700",
   on_hold: "bg-amber-50 text-amber-700",
   closed: "bg-slate-100 text-slate-600",
-};
-
-const PRIORITY_LABELS: Record<string, string> = {
-  low: "Düşük",
-  normal: "Normal",
-  high: "Yüksek",
-  urgent: "Acil",
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -50,6 +38,8 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export default function PositionsPage() {
   const router = useRouter();
+  const t = useTranslations("positions");
+  const tc = useTranslations("common");
   const [positions, setPositions] = useState<Position[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +49,19 @@ export default function PositionsPage() {
   const [priorityFilter, setPriorityFilter] = useState("");
   const [workModelFilter, setWorkModelFilter] = useState("");
   const [cityFilter, setCityFilter] = useState("");
+
+  const STATUS_LABELS: Record<string, string> = {
+    open: t("statusOpen"),
+    on_hold: t("statusOnHold"),
+    closed: t("statusClosed"),
+  };
+
+  const PRIORITY_LABELS: Record<string, string> = {
+    low: t("priorityLow"),
+    normal: t("priorityNormal"),
+    high: t("priorityHigh"),
+    urgent: t("priorityUrgent"),
+  };
 
   const fetchPositions = useCallback(async () => {
     setLoading(true);
@@ -88,8 +91,8 @@ export default function PositionsPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Pozisyonlar</h1>
-          <p className="mt-1 text-sm text-slate-500">Açık pozisyonları takip edin</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
         </div>
         <Link
           href="/positions/new"
@@ -98,7 +101,7 @@ export default function PositionsPage() {
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Yeni Pozisyon
+          {t("newPosition")}
         </Link>
       </div>
 
@@ -118,7 +121,7 @@ export default function PositionsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Pozisyon, firma veya şehir ile ara..."
+            placeholder={t("searchPlaceholder")}
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
         </div>
@@ -126,59 +129,59 @@ export default function PositionsPage() {
           type="submit"
           className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
         >
-          Ara
+          {tc("search")}
         </button>
       </form>
 
       {/* Filters */}
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Durum</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{tc("status")}</label>
           <select
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
-            <option value="">Tümü</option>
-            <option value="open">Açık</option>
-            <option value="on_hold">Beklemede</option>
-            <option value="closed">Kapalı</option>
+            <option value="">{tc("all")}</option>
+            <option value="open">{t("statusOpen")}</option>
+            <option value="on_hold">{t("statusOnHold")}</option>
+            <option value="closed">{t("statusClosed")}</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Öncelik</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t("priority")}</label>
           <select
             value={priorityFilter}
             onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
-            <option value="">Tümü</option>
-            <option value="low">Düşük</option>
-            <option value="normal">Normal</option>
-            <option value="high">Yüksek</option>
-            <option value="urgent">Acil</option>
+            <option value="">{tc("all")}</option>
+            <option value="low">{t("priorityLow")}</option>
+            <option value="normal">{t("priorityNormal")}</option>
+            <option value="high">{t("priorityHigh")}</option>
+            <option value="urgent">{t("priorityUrgent")}</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Çalışma Modeli</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t("workModel")}</label>
           <select
             value={workModelFilter}
             onChange={(e) => { setWorkModelFilter(e.target.value); setPage(1); }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           >
-            <option value="">Tümü</option>
-            <option value="office">Ofis</option>
-            <option value="remote">Uzaktan</option>
-            <option value="hybrid">Hibrit</option>
+            <option value="">{tc("all")}</option>
+            <option value="office">{tc("office")}</option>
+            <option value="remote">{tc("remote")}</option>
+            <option value="hybrid">{tc("hybrid")}</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Şehir</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{tc("city")}</label>
           <input
             type="text"
             value={cityFilter}
             onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
-            placeholder="Şehir..."
+            placeholder={tc("city") + "..."}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
           />
         </div>
@@ -188,7 +191,7 @@ export default function PositionsPage() {
             onClick={() => { setStatusFilter(""); setPriorityFilter(""); setWorkModelFilter(""); setCityFilter(""); setPage(1); }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
           >
-            Temizle
+            {tc("clear")}
           </button>
         )}
       </div>
@@ -196,14 +199,14 @@ export default function PositionsPage() {
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="p-12 text-center text-slate-400">
-            <div className="animate-pulse-soft text-lg">Yükleniyor...</div>
+            <div className="animate-pulse-soft text-lg">{tc("loading")}</div>
           </div>
         ) : positions.length === 0 ? (
           <div className="p-12 text-center">
             <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
-            <p className="mt-3 text-sm text-slate-500">Pozisyon bulunamadı</p>
+            <p className="mt-3 text-sm text-slate-500">{t("notFoundEmpty")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -211,22 +214,22 @@ export default function PositionsPage() {
             <thead>
               <tr className="bg-slate-50/80">
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Pozisyon
+                  {tc("position")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Firma
+                  {tc("firm")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Durum
+                  {tc("status")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Öncelik
+                  {t("priority")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Süreçler
+                  {tc("processes")}
                 </th>
                 <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  İşlem
+                  {tc("actions")}
                 </th>
               </tr>
             </thead>
@@ -240,7 +243,7 @@ export default function PositionsPage() {
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-slate-900">{p.title}</div>
                     <div className="text-xs text-slate-500">
-                      {[p.city, p.workModel].filter(Boolean).join(" · ")}
+                      {[p.city, p.workModel].filter(Boolean).join(" \u00B7 ")}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
@@ -263,10 +266,10 @@ export default function PositionsPage() {
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
                     {p.activeProcessCount > 0 ? (
                       <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                        {p.activeProcessCount} aktif
+                        {`${p.activeProcessCount} ${tc("active").toLowerCase()}`}
                       </span>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-slate-400">{"\u2014"}</span>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
@@ -275,7 +278,7 @@ export default function PositionsPage() {
                       className="font-medium text-indigo-600 transition-colors hover:text-indigo-700"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      Görüntüle
+                      {tc("view")}
                     </Link>
                   </td>
                 </tr>
@@ -288,14 +291,14 @@ export default function PositionsPage() {
 
       {pagination && pagination.totalPages > 1 && (
         <div className="mt-5 flex items-center justify-between text-sm">
-          <span className="text-slate-500">Toplam {pagination.total} pozisyon</span>
+          <span className="text-slate-500">{tc("totalItems", { count: pagination.total, entity: t("title").toLowerCase() })}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              Önceki
+              {tc("previous")}
             </button>
             <span className="px-3 py-2 text-sm font-medium text-slate-700">
               {page} / {pagination.totalPages}
@@ -305,7 +308,7 @@ export default function PositionsPage() {
               disabled={page === pagination.totalPages}
               className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              Sonraki
+              {tc("next")}
             </button>
           </div>
         </div>

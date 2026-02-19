@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import CVUpload from "@/components/cv-upload";
 import LinkedInPaste from "@/components/linkedin-paste";
 import type { CVParseResult } from "@/lib/ai";
@@ -17,6 +18,9 @@ type FileInfo = {
 
 export default function NewCandidatePage() {
   const router = useRouter();
+  const t = useTranslations("candidates");
+  const tc = useTranslations("common");
+  const tConst = useTranslations("constants");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [languages, setLanguages] = useState<LanguageEntry[]>([]);
@@ -125,7 +129,7 @@ export default function NewCandidatePage() {
             `${m.firstName} ${m.lastName} (${m.matchType})`
           )
           .join(", ");
-        if (!confirm(`Olası tekrar kayıt bulundu: ${names}\n\nYine de kaydetmek istiyor musunuz?`)) {
+        if (!confirm(t("form.duplicateWarning", { names }))) {
           setSaving(false);
           return;
         }
@@ -138,7 +142,7 @@ export default function NewCandidatePage() {
       });
       const data = await res.json();
       if (!data.success) {
-        setError(data.error?.message || "Bir hata oluştu");
+        setError(data.error?.message || t("form.error"));
         return;
       }
 
@@ -171,8 +175,8 @@ export default function NewCandidatePage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Yeni Aday</h1>
-        <p className="mt-1 text-sm text-slate-500">Aday havuzuna yeni bir kayıt ekleyin</p>
+        <h1 className="text-2xl font-bold text-slate-900">{t("form.newTitle")}</h1>
+        <p className="mt-1 text-sm text-slate-500">{t("form.newDescription")}</p>
       </div>
 
       {error && (
@@ -194,12 +198,12 @@ export default function NewCandidatePage() {
           <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
           </svg>
-          AI tarafından doldurulan alanları kontrol edin ve gerekirse düzeltin
+          {t("form.aiParsedNotice")}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Kişisel Bilgiler */}
+        {/* Kisisel Bilgiler */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
@@ -207,27 +211,27 @@ export default function NewCandidatePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Kişisel Bilgiler</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("form.personalInfo")}</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Ad *</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.firstName")} {t("form.required")}</label>
               <input name="firstName" type="text" required value={fields.firstName} onChange={(e) => updateField("firstName", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Soyad *</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.lastName")} {t("form.required")}</label>
               <input name="lastName" type="text" required value={fields.lastName} onChange={(e) => updateField("lastName", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">E-posta</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.email")}</label>
               <input name="email" type="email" value={fields.email} onChange={(e) => updateField("email", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Telefon</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.phone")}</label>
               <input name="phone" type="text" value={fields.phone} onChange={(e) => updateField("phone", e.target.value)} className={inputClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700">LinkedIn URL</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.linkedinUrl")}</label>
               <input name="linkedinUrl" type="url" value={fields.linkedinUrl} onChange={(e) => updateField("linkedinUrl", e.target.value)} className={inputClass} />
             </div>
           </div>
@@ -241,44 +245,44 @@ export default function NewCandidatePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Profesyonel Bilgiler</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("form.professionalInfo")}</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Mevcut Pozisyon</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.currentPosition")}</label>
               <input name="currentTitle" type="text" value={fields.currentTitle} onChange={(e) => updateField("currentTitle", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Sektör</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.sector")}</label>
               <input name="currentSector" type="text" value={fields.currentSector} onChange={(e) => updateField("currentSector", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Toplam Deneyim (Yıl)</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.experienceYears")}</label>
               <input name="totalExperienceYears" type="number" min="0" max="50" value={fields.totalExperienceYears} onChange={(e) => updateField("totalExperienceYears", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Eğitim Seviyesi</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.educationLevel")}</label>
               <select name="educationLevel" value={fields.educationLevel} onChange={(e) => updateField("educationLevel", e.target.value)} className={inputClass}>
-                <option value="">Seçiniz</option>
-                <option value="Lise">Lise</option>
-                <option value="Ön Lisans">Ön Lisans</option>
-                <option value="Lisans">Lisans</option>
-                <option value="Yüksek Lisans">Yüksek Lisans</option>
-                <option value="Doktora">Doktora</option>
+                <option value="">{t("form.selectOption")}</option>
+                <option value="Lise">{t("form.educationOptions.highSchool")}</option>
+                <option value="Ön Lisans">{t("form.educationOptions.associate")}</option>
+                <option value="Lisans">{t("form.educationOptions.bachelor")}</option>
+                <option value="Yüksek Lisans">{t("form.educationOptions.master")}</option>
+                <option value="Doktora">{t("form.educationOptions.doctorate")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Üniversite</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.university")}</label>
               <input name="universityName" type="text" value={fields.universityName} onChange={(e) => updateField("universityName", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Bölüm</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.department")}</label>
               <input name="universityDepartment" type="text" value={fields.universityDepartment} onChange={(e) => updateField("universityDepartment", e.target.value)} className={inputClass} />
             </div>
           </div>
         </div>
 
-        {/* Maaş & Konum */}
+        {/* Maas & Konum */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
@@ -287,15 +291,15 @@ export default function NewCandidatePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
               </svg>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">Maaş ve Konum</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t("form.salaryLocation")}</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Maaş Beklentisi</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.salaryExpectation")}</label>
               <input name="salaryExpectation" type="number" min="0" value={fields.salaryExpectation} onChange={(e) => updateField("salaryExpectation", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Para Birimi</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.currency")}</label>
               <select name="salaryCurrency" value={fields.salaryCurrency} onChange={(e) => updateField("salaryCurrency", e.target.value)} className={inputClass}>
                 <option value="TRY">TRY</option>
                 <option value="USD">USD</option>
@@ -303,35 +307,35 @@ export default function NewCandidatePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Maaş Tipi</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.salaryType")}</label>
               <select name="salaryType" value={fields.salaryType} onChange={(e) => updateField("salaryType", e.target.value)} className={inputClass}>
-                <option value="">Seçiniz</option>
-                <option value="net">Net</option>
-                <option value="gross">Brüt</option>
+                <option value="">{t("form.selectOption")}</option>
+                <option value="net">{t("form.salaryTypes.net")}</option>
+                <option value="gross">{t("form.salaryTypes.gross")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Ülke</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.country")}</label>
               <input name="country" type="text" value={fields.country} onChange={(e) => updateField("country", e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Şehir</label>
+              <label className="block text-sm font-medium text-slate-700">{t("form.city")}</label>
               <input name="city" type="text" value={fields.city} onChange={(e) => updateField("city", e.target.value)} className={inputClass} />
             </div>
             <div className="flex items-end gap-6">
               <label className="flex items-center gap-2 text-sm text-slate-700">
                 <input name="isRemoteEligible" type="checkbox" checked={fields.isRemoteEligible} onChange={(e) => updateField("isRemoteEligible", e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                Uzaktan
+                {t("form.remote")}
               </label>
               <label className="flex items-center gap-2 text-sm text-slate-700">
                 <input name="isHybridEligible" type="checkbox" checked={fields.isHybridEligible} onChange={(e) => updateField("isHybridEligible", e.target.checked)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
-                Hibrit
+                {t("form.hybrid")}
               </label>
             </div>
           </div>
         </div>
 
-        {/* Yabancı Diller */}
+        {/* Yabanci Diller */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -340,7 +344,7 @@ export default function NewCandidatePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
                 </svg>
               </div>
-              <h2 className="text-lg font-semibold text-slate-900">Yabancı Diller</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("form.languages")}</h2>
             </div>
             <button
               type="button"
@@ -350,11 +354,11 @@ export default function NewCandidatePage() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              Dil Ekle
+              {t("form.addLanguage")}
             </button>
           </div>
           {languages.length === 0 ? (
-            <p className="text-sm text-slate-500">Henüz dil eklenmedi</p>
+            <p className="text-sm text-slate-500">{t("form.noLanguages")}</p>
           ) : (
             <div className="space-y-3">
               {languages.map((lang, i) => (
@@ -368,20 +372,20 @@ export default function NewCandidatePage() {
                     }}
                     className="mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   >
-                    <option value="">Dil seçin</option>
-                    <option value="İngilizce">İngilizce</option>
-                    <option value="Almanca">Almanca</option>
-                    <option value="Fransızca">Fransızca</option>
-                    <option value="İspanyolca">İspanyolca</option>
-                    <option value="Rusça">Rusça</option>
-                    <option value="Arapça">Arapça</option>
-                    <option value="Çince">Çince</option>
-                    <option value="Japonca">Japonca</option>
-                    <option value="Korece">Korece</option>
-                    <option value="İtalyanca">İtalyanca</option>
-                    <option value="Portekizce">Portekizce</option>
-                    <option value="Hollandaca">Hollandaca</option>
-                    <option value="Diğer">Diğer</option>
+                    <option value="">{t("form.selectLanguage")}</option>
+                    <option value="İngilizce">{tConst("languageNames.english")}</option>
+                    <option value="Almanca">{tConst("languageNames.german")}</option>
+                    <option value="Fransızca">{tConst("languageNames.french")}</option>
+                    <option value="İspanyolca">{tConst("languageNames.spanish")}</option>
+                    <option value="Rusça">{tConst("languageNames.russian")}</option>
+                    <option value="Arapça">{tConst("languageNames.arabic")}</option>
+                    <option value="Çince">{tConst("languageNames.chinese")}</option>
+                    <option value="Japonca">{tConst("languageNames.japanese")}</option>
+                    <option value="Korece">{tConst("languageNames.korean")}</option>
+                    <option value="İtalyanca">{tConst("languageNames.italian")}</option>
+                    <option value="Portekizce">{tConst("languageNames.portuguese")}</option>
+                    <option value="Hollandaca">{tConst("languageNames.dutch")}</option>
+                    <option value="Diğer">{tConst("languageNames.other")}</option>
                   </select>
                   <select
                     value={lang.level}
@@ -392,10 +396,10 @@ export default function NewCandidatePage() {
                     }}
                     className="mt-1.5 block w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                   >
-                    <option value="beginner">Başlangıç</option>
-                    <option value="intermediate">Orta</option>
-                    <option value="advanced">İleri</option>
-                    <option value="native">Ana Dil</option>
+                    <option value="beginner">{tConst("languageLevels.beginner")}</option>
+                    <option value="intermediate">{tConst("languageLevels.intermediate")}</option>
+                    <option value="advanced">{tConst("languageLevels.advanced")}</option>
+                    <option value="native">{tConst("languageLevels.native")}</option>
                   </select>
                   <button
                     type="button"
@@ -418,14 +422,14 @@ export default function NewCandidatePage() {
             disabled={saving}
             className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-indigo-700 hover:shadow-md disabled:opacity-50"
           >
-            {saving ? "Kaydediliyor..." : "Kaydet"}
+            {saving ? t("form.saving") : t("form.save")}
           </button>
           <button
             type="button"
             onClick={() => router.back()}
             className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
           >
-            İptal
+            {t("form.cancel")}
           </button>
         </div>
       </form>

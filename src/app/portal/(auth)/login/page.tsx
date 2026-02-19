@@ -3,10 +3,12 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useEffect, useState, Suspense } from "react";
+import { useTranslations } from "next-intl";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("portal");
   const token = searchParams.get("token");
   const [status, setStatus] = useState<"loading" | "error" | "no-token">(
     token ? "loading" : "no-token"
@@ -27,11 +29,11 @@ function LoginContent() {
           router.push("/portal");
         } else {
           setStatus("error");
-          setErrorMessage("Bağlantı geçersiz veya süresi dolmuş.");
+          setErrorMessage(t("loginInvalidLink"));
         }
       } catch {
         setStatus("error");
-        setErrorMessage("Giriş sırasında bir hata oluştu.");
+        setErrorMessage(t("loginError"));
       }
     }
 
@@ -44,14 +46,14 @@ function LoginContent() {
         <div className="rounded-lg border bg-white p-8 shadow-sm">
           <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold text-slate-900">TalentFlow</h1>
-            <p className="mt-1 text-sm text-slate-500">Aday Portalı</p>
+            <p className="mt-1 text-sm text-slate-500">{t("loginTitle")}</p>
           </div>
 
           {status === "loading" && (
             <div className="text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600" />
               <p className="mt-4 text-sm text-slate-600">
-                Giriş yapılıyor...
+                {t("loginLoading")}
               </p>
             </div>
           )}
@@ -67,7 +69,7 @@ function LoginContent() {
                 {errorMessage}
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                Lütfen danışmanınızdan yeni bir erişim bağlantısı isteyin.
+                {t("loginRequestNew")}
               </p>
             </div>
           )}
@@ -80,7 +82,7 @@ function LoginContent() {
                 </svg>
               </div>
               <p className="mt-4 text-sm text-slate-600">
-                Portala erişmek için size gönderilen e-postadaki bağlantıyı kullanın.
+                {t("loginInstruction")}
               </p>
             </div>
           )}

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type Firm = {
   id: string;
@@ -20,6 +21,9 @@ type Pagination = { page: number; limit: number; total: number; totalPages: numb
 
 export default function FirmsPage() {
   const router = useRouter();
+  const t = useTranslations("firms");
+  const tc = useTranslations("common");
+  const tn = useTranslations("nav");
   const [firms, setFirms] = useState<Firm[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,8 +58,8 @@ export default function FirmsPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Firmalar</h1>
-          <p className="mt-1 text-sm text-slate-500">Müşteri firmalarınızı yönetin</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
         </div>
         <Link
           href="/firms/new"
@@ -64,7 +68,7 @@ export default function FirmsPage() {
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Yeni Firma
+          {t("newFirm")}
         </Link>
       </div>
 
@@ -84,7 +88,7 @@ export default function FirmsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Firma adı, sektör veya şehir ile ara..."
+            placeholder={t("searchPlaceholder")}
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
           />
         </div>
@@ -92,29 +96,29 @@ export default function FirmsPage() {
           type="submit"
           className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
         >
-          Ara
+          {tc("search")}
         </button>
       </form>
 
       {/* Filters */}
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Sektör</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{tc("sector")}</label>
           <input
             type="text"
             value={sector}
             onChange={(e) => { setSector(e.target.value); setPage(1); }}
-            placeholder="Sektör..."
+            placeholder={tc("sector") + "..."}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Şehir</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{tc("city")}</label>
           <input
             type="text"
             value={city}
             onChange={(e) => { setCity(e.target.value); setPage(1); }}
-            placeholder="Şehir..."
+            placeholder={tc("city") + "..."}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-36"
           />
         </div>
@@ -124,7 +128,7 @@ export default function FirmsPage() {
             onClick={() => { setSector(""); setCity(""); setPage(1); }}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50 transition-colors"
           >
-            Temizle
+            {tc("clear")}
           </button>
         )}
       </div>
@@ -132,14 +136,14 @@ export default function FirmsPage() {
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="p-12 text-center text-slate-400">
-            <div className="animate-pulse-soft text-lg">Yükleniyor...</div>
+            <div className="animate-pulse-soft text-lg">{tc("loading")}</div>
           </div>
         ) : firms.length === 0 ? (
           <div className="p-12 text-center">
             <svg className="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
             </svg>
-            <p className="mt-3 text-sm text-slate-500">Firma bulunamadı</p>
+            <p className="mt-3 text-sm text-slate-500">{t("notFoundEmpty")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -147,19 +151,19 @@ export default function FirmsPage() {
             <thead>
               <tr className="bg-slate-50/80">
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Firma
+                  {tc("firm")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Sektör
+                  {tc("sector")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Şehir
+                  {tc("city")}
                 </th>
                 <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Pozisyonlar
+                  {tn("positions")}
                 </th>
                 <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  İşlem
+                  {tc("actions")}
                 </th>
               </tr>
             </thead>
@@ -182,14 +186,14 @@ export default function FirmsPage() {
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-                    {f.sector || "—"}
+                    {f.sector || "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-                    {f.city || "—"}
+                    {f.city || "\u2014"}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                      {f.positionCount} pozisyon
+                      {t("positionCount", { count: f.positionCount })}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
@@ -198,7 +202,7 @@ export default function FirmsPage() {
                       className="font-medium text-indigo-600 transition-colors hover:text-indigo-700"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      Görüntüle
+                      {tc("view")}
                     </Link>
                   </td>
                 </tr>
@@ -211,14 +215,14 @@ export default function FirmsPage() {
 
       {pagination && pagination.totalPages > 1 && (
         <div className="mt-5 flex items-center justify-between text-sm">
-          <span className="text-slate-500">Toplam {pagination.total} firma</span>
+          <span className="text-slate-500">{tc("totalItems", { count: pagination.total, entity: t("title").toLowerCase() })}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              Önceki
+              {tc("previous")}
             </button>
             <span className="px-3 py-2 text-sm font-medium text-slate-700">
               {page} / {pagination.totalPages}
@@ -228,7 +232,7 @@ export default function FirmsPage() {
               disabled={page === pagination.totalPages}
               className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              Sonraki
+              {tc("next")}
             </button>
           </div>
         </div>

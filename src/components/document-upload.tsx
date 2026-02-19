@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type DocumentUploadProps = {
   candidateId: string;
@@ -11,6 +12,8 @@ const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".doc"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function DocumentUpload({ candidateId, onUploaded }: DocumentUploadProps) {
+  const t = useTranslations("components");
+  const tc = useTranslations("common");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -19,10 +22,10 @@ export default function DocumentUpload({ candidateId, onUploaded }: DocumentUplo
   function validateFile(f: File): string | null {
     const ext = f.name.toLowerCase().slice(f.name.lastIndexOf("."));
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return "Desteklenmeyen format. PDF veya DOCX yükleyin.";
+      return t("documentUpload.unsupportedFormat");
     }
     if (f.size > MAX_SIZE) {
-      return "Dosya boyutu 10MB'ı aşamaz.";
+      return t("documentUpload.fileTooLarge");
     }
     return null;
   }
@@ -49,13 +52,13 @@ export default function DocumentUpload({ candidateId, onUploaded }: DocumentUplo
 
       const json = await res.json();
       if (!json.success) {
-        setError(json.error?.message || "Yükleme başarısız");
+        setError(json.error?.message || t("documentUpload.uploadFailed"));
         return;
       }
 
       onUploaded();
     } catch {
-      setError("Yükleme sırasında bir hata oluştu");
+      setError(t("documentUpload.uploadError"));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -90,7 +93,7 @@ export default function DocumentUpload({ candidateId, onUploaded }: DocumentUplo
         {uploading ? (
           <>
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
-            <span className="text-sm text-slate-600">Yükleniyor...</span>
+            <span className="text-sm text-slate-600">{tc("uploading")}</span>
           </>
         ) : (
           <>
@@ -98,7 +101,7 @@ export default function DocumentUpload({ candidateId, onUploaded }: DocumentUplo
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             <span className="text-sm text-slate-600">
-              Belge yükle <span className="text-xs text-slate-400">(PDF, DOCX — Maks. 10MB)</span>
+              {t("documentUpload.uploadDocument")} <span className="text-xs text-slate-400">{t("documentUpload.fileTypes")}</span>
             </span>
           </>
         )}

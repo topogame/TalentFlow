@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { PIPELINE_STAGE_LABELS, MATCH_CATEGORY_LABELS } from "@/lib/constants";
 
 type Process = {
@@ -45,22 +46,10 @@ type Position = {
   updatedAt: string;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  open: "Açık",
-  on_hold: "Beklemede",
-  closed: "Kapalı",
-};
-
 const STATUS_COLORS: Record<string, string> = {
   open: "bg-emerald-50 text-emerald-700",
   on_hold: "bg-amber-50 text-amber-700",
   closed: "bg-slate-100 text-slate-600",
-};
-
-const WORK_MODEL_LABELS: Record<string, string> = {
-  office: "Ofis",
-  remote: "Uzaktan",
-  hybrid: "Hibrit",
 };
 
 type MatchCategoryResult = {
@@ -101,6 +90,9 @@ function getBarColor(score: number): string {
 export default function PositionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("positions");
+  const tc = useTranslations("common");
   const [position, setPosition] = useState<Position | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -110,6 +102,18 @@ export default function PositionDetailPage() {
   const [matchError, setMatchError] = useState("");
   const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
   const [addingToProcess, setAddingToProcess] = useState<string | null>(null);
+
+  const STATUS_LABELS: Record<string, string> = {
+    open: t("statusOpen"),
+    on_hold: t("statusOnHold"),
+    closed: t("statusClosed"),
+  };
+
+  const WORK_MODEL_LABELS: Record<string, string> = {
+    office: tc("office"),
+    remote: tc("remote"),
+    hybrid: tc("hybrid"),
+  };
 
   const fetchPosition = useCallback(async () => {
     const res = await fetch(`/api/positions/${id}`);
@@ -131,12 +135,12 @@ export default function PositionDetailPage() {
       const res = await fetch(`/api/positions/${id}/match-candidates`);
       const data = await res.json();
       if (!data.success) {
-        setMatchError(data.error?.message || "Eşleştirme yapılamadı");
+        setMatchError(data.error?.message || t("detail.matchFailed"));
         return;
       }
       setMatchResults(data.data);
     } catch {
-      setMatchError("Eşleştirme sırasında bir hata oluştu");
+      setMatchError(t("detail.matchError"));
     } finally {
       setMatchLoading(false);
     }
@@ -158,7 +162,7 @@ export default function PositionDetailPage() {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.error?.message || "Sürece eklenemedi");
+        alert(data.error?.message || t("detail.addToProcessFailed"));
         return;
       }
       // Remove from match results and refresh position
@@ -170,7 +174,7 @@ export default function PositionDetailPage() {
       }
       fetchPosition();
     } catch {
-      alert("Sürece ekleme sırasında bir hata oluştu");
+      alert(t("detail.addToProcessError"));
     } finally {
       setAddingToProcess(null);
     }
@@ -179,7 +183,7 @@ export default function PositionDetailPage() {
   if (loading)
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-pulse-soft text-lg text-slate-400">Yükleniyor...</div>
+        <div className="animate-pulse-soft text-lg text-slate-400">{tc("loading")}</div>
       </div>
     );
   if (!position) return null;
@@ -193,7 +197,7 @@ export default function PositionDetailPage() {
         <div>
           <div className="flex items-center gap-2">
             <Link href="/positions" className="text-sm text-slate-500 transition-colors hover:text-slate-700">
-              Pozisyonlar
+              {t("title")}
             </Link>
             <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -215,7 +219,7 @@ export default function PositionDetailPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
             </svg>
-            Düzenle
+            {tc("edit")}
           </Link>
           <span
             className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${STATUS_COLORS[position.status] || "bg-slate-100 text-slate-600"}`}
@@ -231,54 +235,54 @@ export default function PositionDetailPage() {
             <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0" />
             </svg>
-            <h3 className="font-semibold text-slate-900">Pozisyon Detayları</h3>
+            <h3 className="font-semibold text-slate-900">{t("detail.positionDetails")}</h3>
           </div>
           <dl className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <dt className="text-slate-500">Konum</dt>
+              <dt className="text-slate-500">{tc("location")}</dt>
               <dd className="text-slate-900">
-                {[position.city, position.country].filter(Boolean).join(", ") || "—"}
+                {[position.city, position.country].filter(Boolean).join(", ") || tc("noData")}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">Çalışma Modeli</dt>
+              <dt className="text-slate-500">{t("workModel")}</dt>
               <dd className="text-slate-900">
-                {position.workModel ? WORK_MODEL_LABELS[position.workModel] || position.workModel : "—"}
+                {position.workModel ? WORK_MODEL_LABELS[position.workModel] || position.workModel : tc("noData")}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">Gerekli Deneyim</dt>
+              <dt className="text-slate-500">{t("detail.requiredExperience")}</dt>
               <dd className="text-slate-900">
                 {position.minExperienceYears != null
-                  ? `${position.minExperienceYears} yıl`
-                  : "—"}
+                  ? t("detail.yearsExp", { count: position.minExperienceYears })
+                  : tc("noData")}
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">Maaş Aralığı</dt>
+              <dt className="text-slate-500">{t("detail.salaryRange")}</dt>
               <dd className="text-slate-900">
                 {position.salaryMin || position.salaryMax
-                  ? `${position.salaryMin?.toLocaleString("tr-TR") || "?"} - ${position.salaryMax?.toLocaleString("tr-TR") || "?"} ${position.salaryCurrency || "TRY"}`
-                  : "—"}
+                  ? `${position.salaryMin?.toLocaleString(locale) || "?"} - ${position.salaryMax?.toLocaleString(locale) || "?"} ${position.salaryCurrency || "TRY"}`
+                  : tc("noData")}
               </dd>
             </div>
           </dl>
 
           {position.description && (
             <div className="mt-4 border-t border-slate-100 pt-4">
-              <h4 className="mb-2 text-sm font-medium text-slate-700">Açıklama</h4>
+              <h4 className="mb-2 text-sm font-medium text-slate-700">{t("detail.description")}</h4>
               <p className="whitespace-pre-line text-sm text-slate-600">{position.description}</p>
             </div>
           )}
           {position.requirements && (
             <div className="mt-4 border-t border-slate-100 pt-4">
-              <h4 className="mb-2 text-sm font-medium text-slate-700">Gereksinimler</h4>
+              <h4 className="mb-2 text-sm font-medium text-slate-700">{t("detail.requirements")}</h4>
               <p className="whitespace-pre-line text-sm text-slate-600">{position.requirements}</p>
             </div>
           )}
           {position.requiredSkills && (
             <div className="mt-4 border-t border-slate-100 pt-4">
-              <h4 className="mb-2 text-sm font-medium text-slate-700">Gerekli Beceriler</h4>
+              <h4 className="mb-2 text-sm font-medium text-slate-700">{t("detail.requiredSkills")}</h4>
               <p className="whitespace-pre-line text-sm text-slate-600">{position.requiredSkills}</p>
             </div>
           )}
@@ -287,19 +291,19 @@ export default function PositionDetailPage() {
               <dl className="space-y-3 text-sm">
                 {position.sectorPreference && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-500">Sektör Tercihi</dt>
+                    <dt className="text-slate-500">{t("detail.sectorPreference")}</dt>
                     <dd className="text-slate-900">{position.sectorPreference}</dd>
                   </div>
                 )}
                 {position.educationRequirement && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-500">Eğitim Gereksinimi</dt>
+                    <dt className="text-slate-500">{t("detail.educationRequirement")}</dt>
                     <dd className="text-slate-900">{position.educationRequirement}</dd>
                   </div>
                 )}
                 {position.languageRequirement && (
                   <div className="flex justify-between">
-                    <dt className="text-slate-500">Dil Gereksinimi</dt>
+                    <dt className="text-slate-500">{t("detail.languageRequirement")}</dt>
                     <dd className="text-slate-900">{position.languageRequirement}</dd>
                   </div>
                 )}
@@ -314,13 +318,13 @@ export default function PositionDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
             </svg>
             <h3 className="font-semibold text-slate-900">
-              Süreçler ({position.processes.length})
+              {t("detail.processes", { count: position.processes.length })}
             </h3>
           </div>
 
           {activeProcesses.length > 0 && (
             <div className="mb-4">
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Aktif</h4>
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("active")}</h4>
               <div className="space-y-2">
                 {activeProcesses.map((p) => (
                   <div
@@ -347,7 +351,7 @@ export default function PositionDetailPage() {
 
           {closedProcesses.length > 0 && (
             <div>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Tamamlanan</h4>
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("completed")}</h4>
               <div className="space-y-2">
                 {closedProcesses.map((p) => (
                   <div
@@ -376,13 +380,13 @@ export default function PositionDetailPage() {
               <svg className="mx-auto h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
               </svg>
-              <p className="mt-2 text-sm text-slate-500">Henüz süreç yok</p>
+              <p className="mt-2 text-sm text-slate-500">{t("detail.noProcesses")}</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Önerilen Adaylar Section */}
+      {/* Suggested Candidates Section */}
       {position.status === "open" && (
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
@@ -390,7 +394,7 @@ export default function PositionDetailPage() {
               <svg className="h-4 w-4 text-violet-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
               </svg>
-              <h3 className="font-semibold text-slate-900">Önerilen Adaylar</h3>
+              <h3 className="font-semibold text-slate-900">{t("detail.suggestedCandidates")}</h3>
             </div>
             {!matchLoading && (
               <button
@@ -400,7 +404,7 @@ export default function PositionDetailPage() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
                 </svg>
-                {matchResults ? "Yeniden Analiz Et" : "AI Eşleşme Analizi Yap"}
+                {matchResults ? t("detail.reAnalyze") : t("detail.runAIMatch")}
               </button>
             )}
           </div>
@@ -408,7 +412,7 @@ export default function PositionDetailPage() {
           {matchLoading && (
             <div className="flex items-center justify-center gap-3 py-12">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
-              <span className="text-sm text-slate-600">Adaylar analiz ediliyor...</span>
+              <span className="text-sm text-slate-600">{t("detail.analyzingCandidates")}</span>
             </div>
           )}
 
@@ -420,7 +424,7 @@ export default function PositionDetailPage() {
             <>
               {!matchResults.aiAvailable && (
                 <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-                  AI analizi yapılamadı, sadece kural tabanlı puanlama kullanıldı
+                  {t("detail.aiNotAvailable")}
                 </div>
               )}
 
@@ -429,7 +433,7 @@ export default function PositionDetailPage() {
                   <svg className="mx-auto h-8 w-8 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                   </svg>
-                  <p className="mt-2 text-sm text-slate-500">Uygun aday bulunamadı</p>
+                  <p className="mt-2 text-sm text-slate-500">{t("detail.noCandidatesFound")}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -463,7 +467,7 @@ export default function PositionDetailPage() {
                             <p className="text-xs text-slate-500">
                               {[candidate.currentTitle, candidate.currentSector, candidate.city]
                                 .filter(Boolean)
-                                .join(" · ") || "—"}
+                                .join(" · ") || tc("noData")}
                             </p>
                           </div>
                         </div>
@@ -483,7 +487,7 @@ export default function PositionDetailPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                               </svg>
                             )}
-                            Sürece Ekle
+                            {t("detail.addToProcess")}
                           </button>
                           <svg
                             className={`h-4 w-4 text-slate-400 transition-transform ${expandedCandidate === candidate.candidateId ? "rotate-180" : ""}`}
@@ -533,7 +537,7 @@ export default function PositionDetailPage() {
 
           {!matchResults && !matchLoading && !matchError && (
             <p className="py-4 text-center text-sm text-slate-500">
-              AI ile adayları analiz etmek için yukarıdaki butona tıklayın
+              {t("detail.clickToAnalyze")}
             </p>
           )}
         </div>

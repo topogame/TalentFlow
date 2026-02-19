@@ -75,7 +75,7 @@ export function MobileSidebar() {
           type="button"
           onClick={handleClose}
           className="absolute right-3 top-4 inline-flex items-center justify-center rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
-          aria-label="Kapat"
+          aria-label="Close"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />

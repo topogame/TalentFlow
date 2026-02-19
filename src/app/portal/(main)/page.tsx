@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { PORTAL_STAGE_LABELS } from "@/lib/constants";
 
 type ProcessItem = {
@@ -25,6 +26,9 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 export default function PortalDashboard() {
+  const t = useTranslations("portal");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,12 +51,12 @@ export default function PortalDashboard() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-bold text-slate-900">Başvurularım</h1>
+      <h1 className="mb-6 text-xl font-bold text-slate-900">{t("applications")}</h1>
 
       {processes.length === 0 ? (
         <div className="rounded-lg border bg-white p-12 text-center">
           <p className="text-sm text-slate-500">
-            Henüz aktif başvurunuz bulunmuyor.
+            {t("noApplications")}
           </p>
         </div>
       ) : (
@@ -84,16 +88,16 @@ export default function PortalDashboard() {
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-xs text-slate-400">
                   <span>
-                    Başvuru:{" "}
-                    {new Date(proc.createdAt).toLocaleDateString("tr-TR")}
+                    {t("application")}{" "}
+                    {new Date(proc.createdAt).toLocaleDateString(locale)}
                   </span>
                   {lastInterview && (
                     <span>
-                      Son mülakat:{" "}
+                      {t("lastInterview")}{" "}
                       {new Date(lastInterview.scheduledAt).toLocaleDateString(
-                        "tr-TR"
+                        locale
                       )}
-                      {lastInterview.isCompleted ? " (Tamamlandı)" : ""}
+                      {lastInterview.isCompleted ? ` (${tc("completed")})` : ""}
                     </span>
                   )}
                 </div>

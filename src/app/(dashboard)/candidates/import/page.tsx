@@ -2,8 +2,9 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
-// ─── Types ───
+// --- Types ---
 
 type RowDuplicate = {
   candidateId: string;
@@ -39,9 +40,11 @@ type ExecuteResult = {
 
 type Step = "upload" | "preview" | "importing" | "results";
 
-// ─── Page ───
+// --- Page ---
 
 export default function CandidateImportPage() {
+  const t = useTranslations("candidates");
+  const tc = useTranslations("common");
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -52,7 +55,7 @@ export default function CandidateImportPage() {
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ─── Template Download ───
+  // --- Template Download ---
   async function downloadTemplate() {
     const res = await fetch("/api/imports/candidates/template");
     if (res.ok) {
@@ -66,7 +69,7 @@ export default function CandidateImportPage() {
     }
   }
 
-  // ─── File Upload ───
+  // --- File Upload ---
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) {
@@ -81,7 +84,7 @@ export default function CandidateImportPage() {
     if (f) {
       const ext = f.name.toLowerCase();
       if (!ext.endsWith(".xlsx") && !ext.endsWith(".csv")) {
-        setUploadError("Sadece .xlsx ve .csv dosyaları desteklenir");
+        setUploadError(t("import.unsupportedFormat"));
         return;
       }
       setFile(f);
@@ -105,7 +108,7 @@ export default function CandidateImportPage() {
       const json = await res.json();
 
       if (!res.ok) {
-        const errMsg = typeof json.error === "string" ? json.error : json.error?.message || "Dosya işlenemedi";
+        const errMsg = typeof json.error === "string" ? json.error : json.error?.message || t("import.fileProcessError");
         setUploadError(errMsg);
         setUploading(false);
         return;
@@ -124,12 +127,12 @@ export default function CandidateImportPage() {
       setSelectedRows(autoSelected);
       setStep("preview");
     } catch {
-      setUploadError("Bağlantı hatası");
+      setUploadError(t("import.connectionError"));
     }
     setUploading(false);
   }
 
-  // ─── Row Selection ───
+  // --- Row Selection ---
   function toggleRow(rowNumber: number) {
     setSelectedRows((prev) => {
       const next = new Set(prev);
@@ -152,7 +155,7 @@ export default function CandidateImportPage() {
     setSelectedRows(new Set());
   }
 
-  // ─── Execute Import ───
+  // --- Execute Import ---
   async function handleExecute() {
     if (!preview || selectedRows.size === 0) return;
     setStep("importing");
@@ -175,7 +178,7 @@ export default function CandidateImportPage() {
     setStep("results");
   }
 
-  // ─── Reset ───
+  // --- Reset ---
   function handleReset() {
     setStep("upload");
     setFile(null);
@@ -187,29 +190,29 @@ export default function CandidateImportPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  // ─── Render ───
+  // --- Render ---
   return (
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Toplu Aday Yükleme</h1>
-          <p className="mt-1 text-sm text-slate-500">Excel veya CSV dosyasından aday verilerini içe aktarın</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("import.title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("import.description")}</p>
         </div>
         <Link
           href="/candidates"
           className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
         >
-          Geri Dön
+          {t("import.backToList")}
         </Link>
       </div>
 
       {/* Step indicator */}
       <div className="mt-6 flex items-center gap-2 text-sm">
         {[
-          { key: "upload", label: "1. Dosya Yükle" },
-          { key: "preview", label: "2. Önizle" },
-          { key: "importing", label: "3. İçe Aktar" },
-          { key: "results", label: "4. Sonuç" },
+          { key: "upload", label: t("import.steps.upload") },
+          { key: "preview", label: t("import.steps.preview") },
+          { key: "importing", label: t("import.steps.importing") },
+          { key: "results", label: t("import.steps.results") },
         ].map((s, idx) => (
           <div key={s.key} className="flex items-center gap-2">
             {idx > 0 && <div className="h-px w-6 bg-slate-300" />}
@@ -232,9 +235,9 @@ export default function CandidateImportPage() {
       {step === "upload" && (
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-800">Dosya Yükle</h2>
+            <h2 className="text-lg font-semibold text-slate-800">{t("import.uploadTitle")}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Önce şablonu indirin, doldurun ve tekrar yükleyin. Kariyer.net&apos;ten indirdiğiniz CSV dosyasını da yükleyebilirsiniz.
+              {t("import.uploadDescription")}
             </p>
           </div>
 
@@ -245,7 +248,7 @@ export default function CandidateImportPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
-            Şablonu İndir (.xlsx)
+            {t("import.downloadTemplate")}
           </button>
 
           {/* Drop zone */}
@@ -258,9 +261,9 @@ export default function CandidateImportPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
             </svg>
             <p className="text-sm text-slate-600">
-              Dosyayı buraya sürükleyin veya{" "}
+              {t("import.dragOrSelect")}{" "}
               <label className="cursor-pointer font-medium text-indigo-600 hover:text-indigo-500">
-                seçin
+                {t("import.selectFile")}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -270,7 +273,7 @@ export default function CandidateImportPage() {
                 />
               </label>
             </p>
-            <p className="mt-1 text-xs text-slate-400">.xlsx veya .csv dosyaları, en fazla 5MB</p>
+            <p className="mt-1 text-xs text-slate-400">{t("import.fileFormats")}</p>
           </div>
 
           {file && (
@@ -298,10 +301,10 @@ export default function CandidateImportPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Kontrol ediliyor...
+                {t("import.checking")}
               </>
             ) : (
-              "Yükle ve Kontrol Et"
+              t("import.uploadAndCheck")
             )}
           </button>
         </div>
@@ -313,16 +316,16 @@ export default function CandidateImportPage() {
           {/* Summary */}
           <div className="flex flex-wrap gap-3">
             <div className="rounded-lg bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-              {preview.validCount} geçerli
+              {t("import.validCount", { count: preview.validCount })}
             </div>
             <div className="rounded-lg bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
-              {preview.warningCount} uyarılı (olası tekrar)
+              {t("import.warningCount", { count: preview.warningCount })}
             </div>
             <div className="rounded-lg bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700">
-              {preview.errorCount} hatalı
+              {t("import.errorCount", { count: preview.errorCount })}
             </div>
             <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">
-              Toplam: {preview.totalRows} satır
+              {t("import.totalRows", { count: preview.totalRows })}
             </div>
           </div>
 
@@ -337,10 +340,10 @@ export default function CandidateImportPage() {
           {/* Selection actions */}
           <div className="flex gap-2">
             <button onClick={selectAllValid} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200">
-              Tümünü Seç
+              {t("import.selectAll")}
             </button>
             <button onClick={deselectAll} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200">
-              Seçimi Temizle
+              {t("import.deselectAll")}
             </button>
           </div>
 
@@ -351,12 +354,12 @@ export default function CandidateImportPage() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-3 py-2 text-left font-medium text-slate-600 w-10"></th>
-                    <th className="px-3 py-2 text-left font-medium text-slate-600 w-12">Satır</th>
-                    <th className="px-3 py-2 text-left font-medium text-slate-600">Ad</th>
-                    <th className="px-3 py-2 text-left font-medium text-slate-600">Soyad</th>
-                    <th className="px-3 py-2 text-left font-medium text-slate-600">E-posta</th>
-                    <th className="px-3 py-2 text-left font-medium text-slate-600">Telefon</th>
-                    <th className="px-3 py-2 text-left font-medium text-slate-600 w-24">Durum</th>
+                    <th className="px-3 py-2 text-left font-medium text-slate-600 w-12">{t("import.tableRow")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-slate-600">{t("import.tableName")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-slate-600">{t("import.tableSurname")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-slate-600">{t("import.tableEmail")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-slate-600">{t("import.tablePhone")}</th>
+                    <th className="px-3 py-2 text-left font-medium text-slate-600 w-24">{t("import.tableStatus")}</th>
                     <th className="px-3 py-2 text-left font-medium text-slate-600 w-10"></th>
                   </tr>
                 </thead>
@@ -371,11 +374,11 @@ export default function CandidateImportPage() {
 
                     const statusBadge =
                       row.status === "valid" ? (
-                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">Geçerli</span>
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">{t("import.statusValid")}</span>
                       ) : row.status === "warning" ? (
-                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Uyarı</span>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">{t("import.statusWarning")}</span>
                       ) : (
-                        <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700">Hatalı</span>
+                        <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700">{t("import.statusError")}</span>
                       );
 
                     return (
@@ -415,7 +418,7 @@ export default function CandidateImportPage() {
                             <div className="mt-2 ml-[82px] space-y-2 rounded-lg bg-white p-3 text-xs">
                               {row.errors.length > 0 && (
                                 <div>
-                                  <p className="font-semibold text-rose-700">Hatalar:</p>
+                                  <p className="font-semibold text-rose-700">{t("import.errors")}</p>
                                   {row.errors.map((e, i) => (
                                     <p key={i} className="text-rose-600">• {e.field}: {e.message}</p>
                                   ))}
@@ -423,16 +426,16 @@ export default function CandidateImportPage() {
                               )}
                               {row.duplicates.length > 0 && (
                                 <div>
-                                  <p className="font-semibold text-amber-700">Olası tekrarlar:</p>
+                                  <p className="font-semibold text-amber-700">{t("import.possibleDuplicates")}</p>
                                   {row.duplicates.map((d, i) => (
                                     <p key={i} className="text-amber-600">
-                                      • {d.name} ({d.matchType} eşleşmesi, {d.confidence === "exact" ? "kesin" : "kısmi"})
+                                      • {d.name} ({d.matchType} {t("import.matchSuffix")}, {d.confidence === "exact" ? t("import.matchExact") : t("import.matchPartial")})
                                     </p>
                                   ))}
                                 </div>
                               )}
                               {row.errors.length === 0 && row.duplicates.length === 0 && (
-                                <p className="text-slate-400">Tüm veriler geçerli.</p>
+                                <p className="text-slate-400">{t("import.allDataValid")}</p>
                               )}
                             </div>
                           )}
@@ -451,14 +454,14 @@ export default function CandidateImportPage() {
               onClick={handleReset}
               className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
             >
-              İptal
+              {t("import.cancel")}
             </button>
             <button
               onClick={handleExecute}
               disabled={selectedRows.size === 0}
               className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
             >
-              Seçilenleri İçe Aktar ({selectedRows.size} aday)
+              {t("import.importSelected", { count: selectedRows.size })}
             </button>
           </div>
         </div>
@@ -471,7 +474,7 @@ export default function CandidateImportPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <p className="mt-4 text-sm font-medium text-slate-600">İçe aktarılıyor... {selectedRows.size} aday</p>
+          <p className="mt-4 text-sm font-medium text-slate-600">{t("import.importing", { count: selectedRows.size })}</p>
         </div>
       )}
 
@@ -495,10 +498,10 @@ export default function CandidateImportPage() {
                 </div>
               )}
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">İçe Aktarma Tamamlandı</h2>
+                <h2 className="text-lg font-semibold text-slate-800">{t("import.completed")}</h2>
                 <p className="text-sm text-slate-500">
-                  {executeResult.imported} aday başarıyla eklendi
-                  {executeResult.failed > 0 && `, ${executeResult.failed} hata oluştu`}
+                  {t("import.importedCount", { count: executeResult.imported })}
+                  {executeResult.failed > 0 && `, ${t("import.failedCount", { count: executeResult.failed })}`}
                 </p>
               </div>
             </div>
@@ -507,13 +510,13 @@ export default function CandidateImportPage() {
           {/* Failed rows */}
           {executeResult.results.filter((r) => r.status === "error").length > 0 && (
             <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
-              <h3 className="text-sm font-semibold text-rose-700">Hatalı Satırlar</h3>
+              <h3 className="text-sm font-semibold text-rose-700">{t("import.failedRows")}</h3>
               <div className="mt-2 space-y-1">
                 {executeResult.results
                   .filter((r) => r.status === "error")
                   .map((r) => (
                     <p key={r.rowNumber} className="text-xs text-rose-600">
-                      Satır {r.rowNumber}: {r.error}
+                      {t("import.rowError", { row: r.rowNumber, error: r.error || "" })}
                     </p>
                   ))}
               </div>
@@ -526,13 +529,13 @@ export default function CandidateImportPage() {
               href="/candidates"
               className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
             >
-              Aday Listesine Git
+              {t("import.goToCandidates")}
             </Link>
             <button
               onClick={handleReset}
               className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
             >
-              Yeni Yükleme
+              {t("import.newUpload")}
             </button>
           </div>
         </div>

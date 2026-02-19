@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import { INTERVIEW_TYPE_LABELS } from "@/lib/constants";
 
 type CalendarInterview = {
@@ -20,12 +21,6 @@ type CalendarInterview = {
     position: { title: string };
   };
 };
-
-const TURKISH_DAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
-const TURKISH_MONTHS = [
-  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
-  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
-];
 
 const TYPE_COLORS: Record<string, string> = {
   face_to_face: "bg-purple-100 text-purple-700 border-purple-200",
@@ -65,7 +60,21 @@ function isSameDay(a: Date, b: Date) {
 }
 
 export default function CalendarPage() {
+  const t = useTranslations("calendar");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
+
+  const DAYS = [
+    t("days.mon"), t("days.tue"), t("days.wed"), t("days.thu"),
+    t("days.fri"), t("days.sat"), t("days.sun"),
+  ];
+  const MONTHS = [
+    t("months.january"), t("months.february"), t("months.march"),
+    t("months.april"), t("months.may"), t("months.june"),
+    t("months.july"), t("months.august"), t("months.september"),
+    t("months.october"), t("months.november"), t("months.december"),
+  ];
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<"month" | "week">("month");
   const [interviews, setInterviews] = useState<CalendarInterview[]>([]);
@@ -140,8 +149,8 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Takvim</h1>
-          <p className="mt-1 text-sm text-slate-500">Mülakat ve toplantılarınızı takip edin</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
         </div>
       </div>
 
@@ -158,8 +167,8 @@ export default function CalendarPage() {
           </button>
           <h2 className="text-lg font-semibold text-slate-900 min-w-[200px] text-center">
             {view === "month"
-              ? `${TURKISH_MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`
-              : `${weekDates[0].getDate()} - ${weekDates[6].getDate()} ${TURKISH_MONTHS[weekDates[6].getMonth()]} ${weekDates[6].getFullYear()}`}
+              ? `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+              : `${weekDates[0].getDate()} - ${weekDates[6].getDate()} ${MONTHS[weekDates[6].getMonth()]} ${weekDates[6].getFullYear()}`}
           </h2>
           <button
             onClick={() => (view === "month" ? navigateMonth(1) : navigateWeek(1))}
@@ -173,7 +182,7 @@ export default function CalendarPage() {
             onClick={goToday}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            Bugün
+            {t("today")}
           </button>
         </div>
 
@@ -184,7 +193,7 @@ export default function CalendarPage() {
               view === "month" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            Ay
+            {t("month")}
           </button>
           <button
             onClick={() => setView("week")}
@@ -192,7 +201,7 @@ export default function CalendarPage() {
               view === "week" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            Hafta
+            {t("week")}
           </button>
         </div>
       </div>
@@ -203,7 +212,7 @@ export default function CalendarPage() {
         /* Monthly View */
         <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="grid grid-cols-7">
-            {TURKISH_DAYS.map((d) => (
+            {DAYS.map((d) => (
               <div key={d} className="border-b border-slate-100 bg-slate-50/80 px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                 {d}
               </div>
@@ -241,7 +250,7 @@ export default function CalendarPage() {
                         } ${iv.isCompleted ? "opacity-50" : ""}`}
                       >
                         <span className="font-medium">
-                          {new Date(iv.scheduledAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}{" "}
+                          {new Date(iv.scheduledAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}{" "}
                           {iv.process.candidate.firstName} {iv.process.candidate.lastName[0]}.
                         </span>
                         <span className="block truncate text-[9px] opacity-75">
@@ -251,7 +260,7 @@ export default function CalendarPage() {
                     ))}
                     {dayInterviews.length > 2 && (
                       <p className="text-[10px] font-medium text-indigo-600 pl-1">
-                        +{dayInterviews.length - 2} daha
+                        +{dayInterviews.length - 2} {tc("more")}
                       </p>
                     )}
                   </div>
@@ -273,7 +282,7 @@ export default function CalendarPage() {
                   <div className={`border-b border-slate-100 px-2 py-3 text-center ${
                     isToday ? "bg-indigo-50" : "bg-slate-50/80"
                   }`}>
-                    <p className="text-xs font-semibold uppercase text-slate-500">{TURKISH_DAYS[i]}</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">{DAYS[i]}</p>
                     <p className={`mt-1 text-lg font-bold ${isToday ? "text-indigo-600" : "text-slate-900"}`}>
                       {date.getDate()}
                     </p>
@@ -291,11 +300,11 @@ export default function CalendarPage() {
                           } ${iv.isCompleted ? "opacity-50" : ""}`}
                         >
                           <p className="text-xs font-bold">
-                            {new Date(iv.scheduledAt).toLocaleTimeString("tr-TR", {
+                            {new Date(iv.scheduledAt).toLocaleTimeString(locale, {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
-                            <span className="font-normal"> · {iv.durationMinutes} dk</span>
+                            <span className="font-normal"> · {iv.durationMinutes} {tc("minutes")}</span>
                           </p>
                           <p className="mt-1 truncate text-xs font-medium">
                             {iv.process.candidate.firstName} {iv.process.candidate.lastName}
@@ -321,15 +330,15 @@ export default function CalendarPage() {
       <div className="mt-4 flex items-center gap-4">
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-purple-200" />
-          <span className="text-xs text-slate-500">Yüz Yüze</span>
+          <span className="text-xs text-slate-500">{t("faceToFace")}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-blue-200" />
-          <span className="text-xs text-slate-500">Online</span>
+          <span className="text-xs text-slate-500">{t("online")}</span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-slate-200" />
-          <span className="text-xs text-slate-500">Telefon</span>
+          <span className="text-xs text-slate-500">{t("phone")}</span>
         </div>
       </div>
 
@@ -349,7 +358,7 @@ export default function CalendarPage() {
             <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">
-                  Mülakat Detayı
+                  {t("interviewDetail")}
                 </h3>
                 <p className="mt-0.5 text-sm text-slate-500">
                   {selectedInterview.process.candidate.firstName}{" "}
@@ -376,7 +385,7 @@ export default function CalendarPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Firma / Pozisyon</p>
+                  <p className="text-xs font-medium text-slate-500">{t("firmPosition")}</p>
                   <p className="text-sm font-semibold text-slate-900">
                     {selectedInterview.process.firm.name}
                   </p>
@@ -394,9 +403,9 @@ export default function CalendarPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Tarih / Saat</p>
+                  <p className="text-xs font-medium text-slate-500">{t("dateTime")}</p>
                   <p className="text-sm font-semibold text-slate-900">
-                    {new Date(selectedInterview.scheduledAt).toLocaleDateString("tr-TR", {
+                    {new Date(selectedInterview.scheduledAt).toLocaleDateString(locale, {
                       weekday: "long",
                       day: "numeric",
                       month: "long",
@@ -404,11 +413,11 @@ export default function CalendarPage() {
                     })}
                   </p>
                   <p className="text-sm text-slate-600">
-                    {new Date(selectedInterview.scheduledAt).toLocaleTimeString("tr-TR", {
+                    {new Date(selectedInterview.scheduledAt).toLocaleTimeString(locale, {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}{" "}
-                    ({selectedInterview.durationMinutes} dakika)
+                    ({selectedInterview.durationMinutes} {tc("minutesFull")})
                   </p>
                 </div>
               </div>
@@ -421,7 +430,7 @@ export default function CalendarPage() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Mülakat Türü</p>
+                  <p className="text-xs font-medium text-slate-500">{t("interviewType")}</p>
                   <p className="text-sm font-semibold text-slate-900">
                     <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[selectedInterview.type] || TYPE_COLORS.phone}`}>
                       {INTERVIEW_TYPE_LABELS[selectedInterview.type] || selectedInterview.type}
@@ -439,7 +448,7 @@ export default function CalendarPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-slate-500">Toplantı Linki</p>
+                    <p className="text-xs font-medium text-slate-500">{t("meetingLink")}</p>
                     <a
                       href={selectedInterview.meetingLink}
                       target="_blank"
@@ -462,7 +471,7 @@ export default function CalendarPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-slate-500">Konum</p>
+                    <p className="text-xs font-medium text-slate-500">{tc("location")}</p>
                     <p className="text-sm text-slate-900">{selectedInterview.location}</p>
                   </div>
                 </div>
@@ -477,7 +486,7 @@ export default function CalendarPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-slate-500">Notlar</p>
+                    <p className="text-xs font-medium text-slate-500">{tc("notes")}</p>
                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedInterview.notes}</p>
                   </div>
                 </div>
@@ -486,7 +495,7 @@ export default function CalendarPage() {
               {/* Completed badge */}
               {selectedInterview.isCompleted && (
                 <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-center">
-                  <span className="text-xs font-medium text-emerald-700">Tamamlandı</span>
+                  <span className="text-xs font-medium text-emerald-700">{tc("completed")}</span>
                 </div>
               )}
             </div>
@@ -501,7 +510,7 @@ export default function CalendarPage() {
                 }}
                 className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
               >
-                {"S\u00fcrece Git"}
+{tc("goToProcess")}
               </button>
             </div>
           </div>

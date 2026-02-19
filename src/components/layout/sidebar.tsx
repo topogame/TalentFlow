@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 const mainNav = [
   {
-    name: "Dashboard",
+    key: "dashboard",
     href: "/dashboard",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -15,7 +16,7 @@ const mainNav = [
     ),
   },
   {
-    name: "Adaylar",
+    key: "candidates",
     href: "/candidates",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -24,7 +25,7 @@ const mainNav = [
     ),
   },
   {
-    name: "Firmalar",
+    key: "firms",
     href: "/firms",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -33,7 +34,7 @@ const mainNav = [
     ),
   },
   {
-    name: "Pozisyonlar",
+    key: "positions",
     href: "/positions",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -42,7 +43,7 @@ const mainNav = [
     ),
   },
   {
-    name: "S\u00fcre\u00e7ler",
+    key: "processes",
     href: "/processes",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -54,7 +55,7 @@ const mainNav = [
 
 const toolsNav = [
   {
-    name: "E-postalar",
+    key: "emails",
     href: "/emails",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -63,7 +64,7 @@ const toolsNav = [
     ),
   },
   {
-    name: "Takvim",
+    key: "calendar",
     href: "/calendar",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -72,7 +73,7 @@ const toolsNav = [
     ),
   },
   {
-    name: "Raporlar",
+    key: "reports",
     href: "/reports",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -81,7 +82,7 @@ const toolsNav = [
     ),
   },
   {
-    name: "Ayarlar",
+    key: "settings",
     href: "/settings",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -98,6 +99,7 @@ const toolsNav = [
  */
 export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   return (
     <>
@@ -117,7 +119,7 @@ export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       <nav className="sidebar-scroll flex-1 overflow-y-auto px-3 py-4">
         <div className="mb-2 px-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            {"Ana Men\u00fc"}
+            {t("mainMenu")}
           </p>
         </div>
         <ul className="space-y-0.5">
@@ -125,7 +127,7 @@ export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
             return (
-              <li key={item.name}>
+              <li key={item.key}>
                 <Link
                   href={item.href}
                   onClick={onNavClick}
@@ -137,7 +139,7 @@ export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                   )}
                 >
                   {item.icon}
-                  {item.name}
+                  {t(item.key)}
                 </Link>
               </li>
             );
@@ -148,7 +150,7 @@ export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
         <div className="mb-2 px-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-            {"Ara\u00e7lar"}
+            {t("tools")}
           </p>
         </div>
         <ul className="space-y-0.5">
@@ -156,7 +158,7 @@ export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
             const isActive =
               pathname === item.href || pathname.startsWith(item.href + "/");
             return (
-              <li key={item.name}>
+              <li key={item.key}>
                 <Link
                   href={item.href}
                   onClick={onNavClick}
@@ -168,7 +170,7 @@ export function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
                   )}
                 >
                   {item.icon}
-                  {item.name}
+                  {t(item.key)}
                 </Link>
               </li>
             );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { CVParseResult } from "@/lib/ai";
 
 type FileInfo = {
@@ -28,6 +29,8 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploadProps) {
+  const t = useTranslations("components");
+  const tc = useTranslations("common");
   const [state, setState] = useState<UploadState>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
@@ -38,10 +41,10 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
   function validateFile(f: File): string | null {
     const ext = f.name.toLowerCase().slice(f.name.lastIndexOf("."));
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return "Desteklenmeyen format. PDF veya DOCX yükleyin.";
+      return t("cvUpload.unsupportedFormat");
     }
     if (f.size > MAX_SIZE) {
-      return "Dosya boyutu 10MB'ı aşamaz.";
+      return t("cvUpload.fileTooLarge");
     }
     return null;
   }
@@ -86,7 +89,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
 
       const json = await res.json();
       if (!json.success) {
-        setErrorMsg(json.error?.message || "Yükleme başarısız");
+        setErrorMsg(json.error?.message || t("cvUpload.uploadFailed"));
         setState("error");
         return;
       }
@@ -101,7 +104,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
       onFileUploaded?.(info);
       setState("uploaded");
     } catch {
-      setErrorMsg("Yükleme sırasında bir hata oluştu");
+      setErrorMsg(t("cvUpload.uploadError"));
       setState("error");
     }
   }
@@ -123,7 +126,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
 
       const json = await res.json();
       if (!json.success) {
-        setErrorMsg(json.error?.message || "CV analiz edilemedi");
+        setErrorMsg(json.error?.message || t("cvUpload.analyzeFailed"));
         setState("error");
         return;
       }
@@ -131,7 +134,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
       onParsed(json.data);
       setState("parsed");
     } catch {
-      setErrorMsg("CV analizi sırasında bir hata oluştu");
+      setErrorMsg(t("cvUpload.analyzeError"));
       setState("error");
     }
   }
@@ -153,8 +156,8 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
           </svg>
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">CV ile Hızlı Oluşturma</h3>
-          <p className="text-xs text-slate-500">CV yükleyerek aday bilgilerini otomatik doldurun</p>
+          <h3 className="text-sm font-semibold text-slate-900">{t("cvUpload.title")}</h3>
+          <p className="text-xs text-slate-500">{t("cvUpload.description")}</p>
         </div>
       </div>
 
@@ -176,9 +179,9 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
             </svg>
             <p className="text-sm text-slate-600">
-              CV dosyasını sürükleyin veya <span className="font-medium text-violet-600">seçin</span>
+              {t("cvUpload.dragOrSelect")} <span className="font-medium text-violet-600">{tc("select")}</span>
             </p>
-            <p className="mt-1 text-xs text-slate-400">PDF, DOCX — Maks. 10MB</p>
+            <p className="mt-1 text-xs text-slate-400">{t("cvUpload.fileTypes")}</p>
             <input
               ref={inputRef}
               type="file"
@@ -203,14 +206,14 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
                   onClick={handleReset}
                   className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                  Kaldır
+                  {tc("remove")}
                 </button>
                 <button
                   type="button"
                   onClick={handleUpload}
                   className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
                 >
-                  Yükle
+                  {tc("upload")}
                 </button>
               </div>
             </div>
@@ -222,7 +225,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
       {state === "uploading" && (
         <div className="flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-6">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
-          <span className="text-sm text-slate-600">Yükleniyor...</span>
+          <span className="text-sm text-slate-600">{tc("uploading")}</span>
         </div>
       )}
 
@@ -233,7 +236,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
             <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
-            <span className="text-sm text-emerald-700">{fileInfo.fileName} yüklendi</span>
+            <span className="text-sm text-emerald-700">{fileInfo.fileName} {tc("uploaded")}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -244,14 +247,14 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z" />
               </svg>
-              AI ile Analiz Et
+              {tc("analyzeWithAI")}
             </button>
             <button
               type="button"
               onClick={handleReset}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
             >
-              Farklı Dosya
+              {tc("differentFile")}
             </button>
           </div>
         </div>
@@ -261,7 +264,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
       {state === "parsing" && (
         <div className="flex items-center justify-center gap-3 rounded-xl border border-violet-200 bg-violet-50 p-6">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
-          <span className="text-sm text-violet-700">CV analiz ediliyor...</span>
+          <span className="text-sm text-violet-700">{t("cvUpload.analyzing")}</span>
         </div>
       )}
 
@@ -272,14 +275,14 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
             <svg className="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
-            <span className="text-sm text-emerald-700">CV başarıyla analiz edildi — alanları kontrol edin</span>
+            <span className="text-sm text-emerald-700">{t("cvUpload.analyzed")}</span>
           </div>
           <button
             type="button"
             onClick={handleReset}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
           >
-            Farklı CV Yükle
+            {t("cvUpload.uploadDifferent")}
           </button>
         </div>
       )}
@@ -298,7 +301,7 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
             onClick={handleReset}
             className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
           >
-            Tekrar Dene
+            {tc("tryAgain")}
           </button>
         </div>
       )}

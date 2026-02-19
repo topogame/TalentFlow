@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { EMAIL_TEMPLATE_CATEGORY_LABELS, EMAIL_DYNAMIC_FIELDS } from "@/lib/constants";
 
 type Template = {
@@ -48,6 +49,9 @@ type ComposeTemplate = {
 };
 
 export default function EmailsPage() {
+  const t = useTranslations("emails");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState<"templates" | "sent">("templates");
 
   // Templates state
@@ -200,9 +204,9 @@ export default function EmailsPage() {
     setFormError("");
   }
 
-  function editTemplate(t: Template) {
-    setForm({ name: t.name, subject: t.subject, body: t.body, category: t.category || "" });
-    setEditingId(t.id);
+  function editTemplate(tpl: Template) {
+    setForm({ name: tpl.name, subject: tpl.subject, body: tpl.body, category: tpl.category || "" });
+    setEditingId(tpl.id);
     setShowForm(true);
     setFormError("");
   }
@@ -224,7 +228,7 @@ export default function EmailsPage() {
     if (!json.success) {
       const errMsg = typeof json.error === "string"
         ? json.error
-        : json.error?.message || "Bir hata oluştu";
+        : json.error?.message || tc("error");
       setFormError(errMsg);
       setSaving(false);
       return;
@@ -236,7 +240,7 @@ export default function EmailsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Bu şablonu silmek istediğinize emin misiniz?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     await fetch(`/api/email-templates/${id}`, { method: "DELETE" });
     fetchTemplates();
   }
@@ -285,7 +289,7 @@ export default function EmailsPage() {
 
     // Re-apply template variables if a template was already selected
     if (selectedTemplateId) {
-      const tpl = composeTemplates.find((t) => t.id === selectedTemplateId);
+      const tpl = composeTemplates.find((tmpl) => tmpl.id === selectedTemplateId);
       if (tpl) {
         setComposeSubject(replaceTemplateVars(tpl.subject, c));
         setComposeBody(replaceTemplateVars(tpl.body, c));
@@ -311,7 +315,7 @@ export default function EmailsPage() {
       setComposeBody("");
       return;
     }
-    const tpl = composeTemplates.find((t) => t.id === templateId);
+    const tpl = composeTemplates.find((tmpl) => tmpl.id === templateId);
     if (tpl) {
       setComposeSubject(replaceTemplateVars(tpl.subject, selectedCandidate));
       setComposeBody(replaceTemplateVars(tpl.body, selectedCandidate));
@@ -323,19 +327,19 @@ export default function EmailsPage() {
     setComposeSuccess("");
 
     if (!selectedCandidate) {
-      setComposeError("Lütfen bir aday seçin.");
+      setComposeError(t("candidateRequired"));
       return;
     }
     if (!selectedCandidate.email) {
-      setComposeError("Seçilen adayın e-posta adresi bulunmuyor.");
+      setComposeError(t("candidateNoEmail"));
       return;
     }
     if (!composeSubject.trim()) {
-      setComposeError("Konu alanı boş bırakılamaz.");
+      setComposeError(t("subjectRequired"));
       return;
     }
     if (!composeBody.trim()) {
-      setComposeError("İçerik alanı boş bırakılamaz.");
+      setComposeError(t("bodyRequired"));
       return;
     }
 
@@ -362,13 +366,13 @@ export default function EmailsPage() {
       if (!json.success) {
         const errMsg = typeof json.error === "string"
           ? json.error
-          : json.error?.message || "E-posta gönderilemedi.";
+          : json.error?.message || t("sendFailed");
         setComposeError(errMsg);
         setSending(false);
         return;
       }
 
-      setComposeSuccess("E-posta başarıyla gönderildi!");
+      setComposeSuccess(t("sendSuccess"));
       // Refresh sent emails list if currently on that tab
       if (activeTab === "sent") {
         fetchEmails();
@@ -379,15 +383,15 @@ export default function EmailsPage() {
         closeCompose();
       }, 1500);
     } catch {
-      setComposeError("Bir hata oluştu. Lütfen tekrar deneyin.");
+      setComposeError(tc("errorRetry"));
     } finally {
       setSending(false);
     }
   }
 
   const tabs = [
-    { key: "templates" as const, label: "Şablonlar" },
-    { key: "sent" as const, label: "Gönderilmiş" },
+    { key: "templates" as const, label: t("templates") },
+    { key: "sent" as const, label: t("sentEmails") },
   ];
 
   const inputClass =
@@ -397,8 +401,8 @@ export default function EmailsPage() {
     <div>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">E-postalar</h1>
-          <p className="mt-1 text-sm text-slate-500">E-posta şablonları ve gönderim geçmişi</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t("description")}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -408,7 +412,7 @@ export default function EmailsPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
             </svg>
-            Yeni E-posta
+            {t("newEmail")}
           </button>
           {activeTab === "templates" && (
             <button
@@ -418,7 +422,7 @@ export default function EmailsPage() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
-              Yeni Şablon
+              {t("newTemplate")}
             </button>
           )}
         </div>
@@ -430,7 +434,7 @@ export default function EmailsPage() {
           <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl">
             {/* Modal Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4 rounded-t-xl">
-              <h3 className="text-lg font-semibold text-slate-900">Yeni E-posta Gönder</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t("composeTitle")}</h3>
               <button
                 onClick={closeCompose}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -452,7 +456,7 @@ export default function EmailsPage() {
 
               {/* Candidate Search */}
               <div ref={candidateDropdownRef} className="relative">
-                <label className="block text-sm font-medium text-slate-700">Aday *</label>
+                <label className="block text-sm font-medium text-slate-700">{t("candidateLabel")} *</label>
                 {selectedCandidate ? (
                   <div className="mt-1.5 flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50/50 px-4 py-2.5">
                     <div>
@@ -489,7 +493,7 @@ export default function EmailsPage() {
                         onFocus={() => {
                           if (candidateResults.length > 0) setShowCandidateDropdown(true);
                         }}
-                        placeholder="Aday adı veya e-posta ile arayın..."
+                        placeholder={t("candidateSearchPlaceholder")}
                       />
                       {loadingCandidates && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 mt-0.5">
@@ -517,7 +521,7 @@ export default function EmailsPage() {
                                 {c.firstName} {c.lastName}
                               </p>
                               <p className="text-xs text-slate-500 truncate">
-                                {c.email || "E-posta yok"}
+                                {c.email || tc("noEmail")}
                                 {c.currentTitle ? ` - ${c.currentTitle}` : ""}
                               </p>
                             </div>
@@ -527,7 +531,7 @@ export default function EmailsPage() {
                     )}
                     {showCandidateDropdown && candidateSearch.trim() && !loadingCandidates && candidateResults.length === 0 && (
                       <div className="absolute left-0 right-0 z-20 mt-1 rounded-lg border border-slate-200 bg-white p-3 text-center shadow-lg">
-                        <p className="text-sm text-slate-500">Sonuc bulunamadi.</p>
+                        <p className="text-sm text-slate-500">{t("noResults")}</p>
                       </div>
                     )}
                   </>
@@ -536,7 +540,7 @@ export default function EmailsPage() {
 
               {/* Template Selection */}
               <div>
-                <label className="block text-sm font-medium text-slate-700">Sablon</label>
+                <label className="block text-sm font-medium text-slate-700">{t("templateLabel")}</label>
                 <select
                   className={inputClass}
                   value={selectedTemplateId}
@@ -544,13 +548,13 @@ export default function EmailsPage() {
                   disabled={loadingComposeTemplates}
                 >
                   <option value="">
-                    {loadingComposeTemplates ? "Yükleniyor..." : "Sablon seçin (isteğe bağlı)"}
+                    {loadingComposeTemplates ? tc("loading") : t("templateSelectDefault")}
                   </option>
-                  {composeTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                      {t.category
-                        ? ` (${EMAIL_TEMPLATE_CATEGORY_LABELS[t.category] || t.category})`
+                  {composeTemplates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.name}
+                      {tpl.category
+                        ? ` (${EMAIL_TEMPLATE_CATEGORY_LABELS[tpl.category] || tpl.category})`
                         : ""}
                     </option>
                   ))}
@@ -559,36 +563,36 @@ export default function EmailsPage() {
 
               {/* Subject */}
               <div>
-                <label className="block text-sm font-medium text-slate-700">Konu *</label>
+                <label className="block text-sm font-medium text-slate-700">{tc("subject")} *</label>
                 <input
                   className={inputClass}
                   value={composeSubject}
                   onChange={(e) => setComposeSubject(e.target.value)}
-                  placeholder="E-posta konusu"
+                  placeholder={t("subjectPlaceholder")}
                 />
               </div>
 
               {/* Body */}
               <div>
-                <label className="block text-sm font-medium text-slate-700">Icerik *</label>
+                <label className="block text-sm font-medium text-slate-700">{t("bodyLabel")} *</label>
                 <textarea
                   className={`${inputClass} min-h-[180px]`}
                   value={composeBody}
                   onChange={(e) => setComposeBody(e.target.value)}
-                  placeholder="E-posta içeriğini yazın..."
+                  placeholder={t("bodyInputPlaceholder")}
                 />
               </div>
 
               {/* Recipient info */}
               {selectedCandidate && (
                 <div className="rounded-lg bg-slate-50 px-4 py-3">
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Alici</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{tc("recipient")}</p>
                   <p className="mt-1 text-sm text-slate-700">
                     {selectedCandidate.firstName} {selectedCandidate.lastName}
                     {selectedCandidate.email ? (
                       <span className="ml-1 text-slate-500">&lt;{selectedCandidate.email}&gt;</span>
                     ) : (
-                      <span className="ml-1 text-red-500">(E-posta adresi yok)</span>
+                      <span className="ml-1 text-red-500">({tc("noEmailAddress")})</span>
                     )}
                   </p>
                 </div>
@@ -601,7 +605,7 @@ export default function EmailsPage() {
                 onClick={closeCompose}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                Iptal
+                {tc("cancel")}
               </button>
               <button
                 onClick={handleSendEmail}
@@ -614,14 +618,14 @@ export default function EmailsPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Gönderiliyor...
+                    {tc("sending")}
                   </>
                 ) : (
                   <>
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
                     </svg>
-                    Gönder
+                    {tc("send")}
                   </>
                 )}
               </button>
@@ -651,7 +655,7 @@ export default function EmailsPage() {
       {showForm && activeTab === "templates" && (
         <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-lg font-semibold text-slate-900">
-            {editingId ? "Şablonu Düzenle" : "Yeni Şablon"}
+            {editingId ? t("editTemplate") : t("newTemplate")}
           </h3>
 
           {formError && (
@@ -660,22 +664,22 @@ export default function EmailsPage() {
 
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Şablon Adı *</label>
+              <label className="block text-sm font-medium text-slate-700">{t("templateName")} *</label>
               <input
                 className={inputClass}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Mülakat daveti"
+                placeholder={t("templateNamePlaceholder")}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700">Kategori</label>
+              <label className="block text-sm font-medium text-slate-700">{tc("category")}</label>
               <select
                 className={inputClass}
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
               >
-                <option value="">Seçiniz</option>
+                <option value="">{tc("selectOption")}</option>
                 {Object.entries(EMAIL_TEMPLATE_CATEGORY_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -684,17 +688,17 @@ export default function EmailsPage() {
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700">Konu *</label>
+            <label className="block text-sm font-medium text-slate-700">{tc("subject")} *</label>
             <input
               className={inputClass}
               value={form.subject}
               onChange={(e) => setForm({ ...form, subject: e.target.value })}
-              placeholder="Mülakat daveti - {position}"
+              placeholder={t("subjectTemplatePlaceholder")}
             />
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700">Dinamik Alanlar</label>
+            <label className="block text-sm font-medium text-slate-700">{t("dynamicFields")}</label>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {EMAIL_DYNAMIC_FIELDS.map((f) => (
                 <button
@@ -711,13 +715,13 @@ export default function EmailsPage() {
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700">İçerik *</label>
+            <label className="block text-sm font-medium text-slate-700">{t("bodyLabel")} *</label>
             <textarea
               ref={textareaRef}
               className={`${inputClass} min-h-[160px]`}
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
-              placeholder="Sayın {candidateName},&#10;&#10;{firmName} firmasında {position} pozisyonu için..."
+              placeholder={t("bodyPlaceholder")}
             />
           </div>
 
@@ -727,13 +731,13 @@ export default function EmailsPage() {
               disabled={saving}
               className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
-              {saving ? "Kaydediliyor..." : editingId ? "Güncelle" : "Oluştur"}
+              {saving ? tc("saving") : editingId ? tc("update") : tc("create")}
             </button>
             <button
               onClick={resetForm}
               className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
             >
-              İptal
+              {tc("cancel")}
             </button>
           </div>
         </div>
@@ -745,7 +749,7 @@ export default function EmailsPage() {
           <div className="mb-4">
             <input
               className={inputClass}
-              placeholder="Şablon ara..."
+              placeholder={t("searchPlaceholder")}
               value={templatesSearch}
               onChange={(e) => { setTemplatesSearch(e.target.value); setTemplatesPage(1); }}
             />
@@ -762,57 +766,57 @@ export default function EmailsPage() {
               <svg className="h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
-              <h3 className="mt-4 text-lg font-semibold text-slate-900">Henüz şablon yok</h3>
-              <p className="mt-2 text-sm text-slate-500">İlk e-posta şablonunuzu oluşturun.</p>
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">{t("noTemplates")}</h3>
+              <p className="mt-2 text-sm text-slate-500">{t("noTemplatesDesc")}</p>
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-slate-50/80">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Ad</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Kategori</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Konu</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Kullanım</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Durum</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">İşlem</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("name")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("category")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("subject")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("usage")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("status")}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {templates.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 text-sm font-medium text-slate-900">{t.name}</td>
+                  {templates.map((tpl) => (
+                    <tr key={tpl.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 text-sm font-medium text-slate-900">{tpl.name}</td>
                       <td className="px-4 py-3 text-sm">
-                        {t.category ? (
+                        {tpl.category ? (
                           <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                            {EMAIL_TEMPLATE_CATEGORY_LABELS[t.category] || t.category}
+                            {EMAIL_TEMPLATE_CATEGORY_LABELS[tpl.category] || tpl.category}
                           </span>
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
-                      <td className="max-w-[200px] truncate px-4 py-3 text-sm text-slate-600">{t.subject}</td>
-                      <td className="px-4 py-3 text-sm text-slate-600">{t.usageCount}</td>
+                      <td className="max-w-[200px] truncate px-4 py-3 text-sm text-slate-600">{tpl.subject}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600">{tpl.usageCount}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          t.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                          tpl.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
                         }`}>
-                          {t.isActive ? "Aktif" : "Deaktif"}
+                          {tpl.isActive ? tc("active") : tc("deactivated")}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => editTemplate(t)}
+                            onClick={() => editTemplate(tpl)}
                             className="text-sm text-indigo-600 hover:text-indigo-800"
                           >
-                            Düzenle
+                            {tc("edit")}
                           </button>
                           <button
-                            onClick={() => handleDelete(t.id)}
+                            onClick={() => handleDelete(tpl.id)}
                             className="text-sm text-red-600 hover:text-red-800"
                           >
-                            Sil
+                            {tc("delete")}
                           </button>
                         </div>
                       </td>
@@ -824,7 +828,7 @@ export default function EmailsPage() {
               {templatesPagination && templatesPagination.totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
                   <p className="text-sm text-slate-500">
-                    Toplam {templatesPagination.total} şablon
+                    {tc("totalItems", { count: templatesPagination.total, entity: t("templates").toLowerCase() })}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -832,14 +836,14 @@ export default function EmailsPage() {
                       onClick={() => setTemplatesPage((p) => p - 1)}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm disabled:opacity-50"
                     >
-                      Önceki
+                      {tc("previous")}
                     </button>
                     <button
                       disabled={templatesPage >= templatesPagination.totalPages}
                       onClick={() => setTemplatesPage((p) => p + 1)}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm disabled:opacity-50"
                     >
-                      Sonraki
+                      {tc("next")}
                     </button>
                   </div>
                 </div>
@@ -863,20 +867,20 @@ export default function EmailsPage() {
               <svg className="h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
               </svg>
-              <h3 className="mt-4 text-lg font-semibold text-slate-900">Henüz e-posta yok</h3>
-              <p className="mt-2 text-sm text-slate-500">Gönderilmiş e-postalar burada görünecek.</p>
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">{t("noEmails")}</h3>
+              <p className="mt-2 text-sm text-slate-500">{t("noEmailsDesc")}</p>
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <table className="min-w-full divide-y divide-slate-100">
                 <thead className="bg-slate-50/80">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tarih</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Alıcı</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Konu</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Aday</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Durum</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Gönderen</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("date")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("recipient")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("subject")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("candidate")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("status")}</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">{tc("sender")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -887,7 +891,7 @@ export default function EmailsPage() {
                         className="cursor-pointer hover:bg-slate-50/50 transition-colors"
                       >
                         <td className="px-4 py-3 text-sm text-slate-600">
-                          {new Date(e.sentAt).toLocaleDateString("tr-TR", {
+                          {new Date(e.sentAt).toLocaleDateString(locale, {
                             day: "2-digit",
                             month: "2-digit",
                             year: "numeric",
@@ -904,7 +908,7 @@ export default function EmailsPage() {
                           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             e.status === "sent" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"
                           }`}>
-                            {e.status === "sent" ? "Gönderildi" : "Başarısız"}
+                            {e.status === "sent" ? tc("sent") : tc("failed")}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-600">
@@ -918,7 +922,7 @@ export default function EmailsPage() {
                               {e.body}
                             </div>
                             {e.errorMessage && (
-                              <p className="mt-2 text-sm text-red-600">Hata: {e.errorMessage}</p>
+                              <p className="mt-2 text-sm text-red-600">{t("errorPrefix")}: {e.errorMessage}</p>
                             )}
                           </td>
                         </tr>
@@ -931,7 +935,7 @@ export default function EmailsPage() {
               {emailsPagination && emailsPagination.totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3">
                   <p className="text-sm text-slate-500">
-                    Toplam {emailsPagination.total} e-posta
+                    {tc("totalItems", { count: emailsPagination.total, entity: tc("email").toLowerCase() })}
                   </p>
                   <div className="flex gap-2">
                     <button
@@ -939,14 +943,14 @@ export default function EmailsPage() {
                       onClick={() => setEmailsPage((p) => p - 1)}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm disabled:opacity-50"
                     >
-                      Önceki
+                      {tc("previous")}
                     </button>
                     <button
                       disabled={emailsPage >= emailsPagination.totalPages}
                       onClick={() => setEmailsPage((p) => p + 1)}
                       className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm disabled:opacity-50"
                     >
-                      Sonraki
+                      {tc("next")}
                     </button>
                   </div>
                 </div>

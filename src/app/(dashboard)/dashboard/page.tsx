@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import {
   BarChart,
   Bar,
@@ -53,10 +54,18 @@ type DashboardData = {
   upcomingInterviews: UpcomingInterview[];
 };
 
-const statCards = [
+type StatCardKey = "activeCandidates" | "openPositions" | "weekInterviews" | "activeProcesses";
+
+const statCards: {
+  key: StatCardKey;
+  href: string;
+  accent: string;
+  iconBg: string;
+  iconColor: string;
+  icon: React.ReactNode;
+}[] = [
   {
-    key: "activeCandidates" as const,
-    title: "Aktif Adaylar",
+    key: "activeCandidates",
     href: "/candidates",
     accent: "border-indigo-500",
     iconBg: "bg-indigo-50",
@@ -68,8 +77,7 @@ const statCards = [
     ),
   },
   {
-    key: "openPositions" as const,
-    title: "Açık Pozisyonlar",
+    key: "openPositions",
     href: "/positions",
     accent: "border-emerald-500",
     iconBg: "bg-emerald-50",
@@ -81,8 +89,7 @@ const statCards = [
     ),
   },
   {
-    key: "weekInterviews" as const,
-    title: "Bu Hafta Mülakatlar",
+    key: "weekInterviews",
     href: "/calendar",
     accent: "border-amber-500",
     iconBg: "bg-amber-50",
@@ -94,8 +101,7 @@ const statCards = [
     ),
   },
   {
-    key: "activeProcesses" as const,
-    title: "Aktif Süreçler",
+    key: "activeProcesses",
     href: "/processes",
     accent: "border-sky-500",
     iconBg: "bg-sky-50",
@@ -138,26 +144,41 @@ const ACTIVITY_STAGE_COLORS: Record<string, string> = {
   on_hold: "bg-amber-400",
 };
 
-function formatRelativeTime(dateStr: string): string {
+function formatRelativeTime(
+  dateStr: string,
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
+  locale: string
+): string {
   const now = new Date();
   const date = new Date(dateStr);
   const diffMs = now.getTime() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
 
-  if (diffMin < 1) return "Az önce";
-  if (diffMin < 60) return `${diffMin} dk önce`;
+  if (diffMin < 1) return t("justNow");
+  if (diffMin < 60) return t("minutesAgo", { count: diffMin });
   const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH} saat önce`;
+  if (diffH < 24) return t("hoursAgo", { count: diffH });
   const diffD = Math.floor(diffH / 24);
-  if (diffD < 7) return `${diffD} gün önce`;
-  return date.toLocaleDateString("tr-TR");
+  if (diffD < 7) return t("daysAgo", { count: diffD });
+  return date.toLocaleDateString(locale);
 }
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
+  const ts = useTranslations("constants");
+  const locale = useLocale();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const statCardTitles: Record<StatCardKey, string> = {
+    activeCandidates: t("activeCandidates"),
+    openPositions: t("openPositions"),
+    weekInterviews: t("weekInterviews"),
+    activeProcesses: t("activeProcesses"),
+  };
 
   useEffect(() => {
     fetch("/api/dashboard")
@@ -182,9 +203,9 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">
-          Hoş geldiniz{session?.user?.firstName ? `, ${session.user.firstName}` : ""}
+          {session?.user?.firstName ? t("welcomeUser", { name: session.user.firstName }) : t("welcome")}
         </h1>
-        <p className="mt-1 text-slate-500">İşte bugünkü genel bakış</p>
+        <p className="mt-1 text-slate-500">{t("todayOverview")}</p>
       </div>
 
       {/* Stat Cards */}
@@ -197,7 +218,7 @@ export default function DashboardPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-slate-500">{card.title}</p>
+                <p className="text-sm font-medium text-slate-500">{statCardTitles[card.key]}</p>
                 <p className="mt-2 text-3xl font-bold text-slate-900">
                   {loading ? (
                     <span className="animate-pulse-soft">—</span>
@@ -218,14 +239,14 @@ export default function DashboardPage() {
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Pipeline Distribution Chart */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-          <h2 className="text-base font-semibold text-slate-900">Pipeline Dağılımı</h2>
-          <p className="mt-1 text-sm text-slate-500">Aktif süreçlerin aşama dağılımı</p>
+          <h2 className="text-base font-semibold text-slate-900">{t("pipelineDistribution")}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t("pipelineDescription")}</p>
 
           {loading ? (
             <div className="mt-4 h-64 animate-pulse rounded-lg bg-slate-100" />
           ) : pipelineData.every((p) => p.count === 0) ? (
             <div className="mt-4 flex h-64 items-center justify-center text-sm text-slate-400">
-              Henüz aktif süreç bulunmuyor
+              {t("noActiveProcesses")}
             </div>
           ) : (
             <div className="mt-4 h-64">
@@ -251,7 +272,7 @@ export default function DashboardPage() {
                       boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                       fontSize: "13px",
                     }}
-                    formatter={(value) => [value, "Süreç"]}
+                    formatter={(value) => [value, tc("process")]}
                   />
                   <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={48}>
                     {pipelineData.map((entry) => (
@@ -269,8 +290,8 @@ export default function DashboardPage() {
 
         {/* Upcoming Interviews */}
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Yaklaşan Mülakatlar</h2>
-          <p className="mt-1 text-sm text-slate-500">Önümüzdeki 5 mülakat</p>
+          <h2 className="text-base font-semibold text-slate-900">{t("upcomingInterviews")}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t("nextInterviews")}</p>
 
           {loading ? (
             <div className="mt-4 space-y-3">
@@ -280,7 +301,7 @@ export default function DashboardPage() {
             </div>
           ) : !data?.upcomingInterviews?.length ? (
             <div className="mt-4 flex h-48 items-center justify-center text-sm text-slate-400">
-              Yaklaşan mülakat yok
+              {t("noUpcomingInterviews")}
             </div>
           ) : (
             <div className="mt-4 space-y-3">
@@ -304,9 +325,9 @@ export default function DashboardPage() {
                       {iv.process.firm.name} — {iv.process.position.title}
                     </p>
                     <p className="mt-1 text-xs font-medium text-slate-600">
-                      {dt.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })}{" "}
-                      {dt.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                      <span className="font-normal text-slate-400"> · {iv.durationMinutes} dk</span>
+                      {dt.toLocaleDateString(locale, { day: "numeric", month: "long" })}{" "}
+                      {dt.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
+                      <span className="font-normal text-slate-400"> · {iv.durationMinutes} {tc("minutes")}</span>
                     </p>
                   </button>
                 );
@@ -318,8 +339,8 @@ export default function DashboardPage() {
 
       {/* Recent Activity Feed */}
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-900">Son Aktiviteler</h2>
-        <p className="mt-1 text-sm text-slate-500">Son 10 süreç hareketliliği</p>
+        <h2 className="text-base font-semibold text-slate-900">{t("recentActivities")}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t("recentActivitiesDesc")}</p>
 
         {loading ? (
           <div className="mt-4 space-y-3">
@@ -329,7 +350,7 @@ export default function DashboardPage() {
           </div>
         ) : !data?.recentActivity?.length ? (
           <div className="mt-4 flex h-32 items-center justify-center text-sm text-slate-400">
-            Henüz aktivite bulunmuyor
+            {t("noActivities")}
           </div>
         ) : (
           <div className="mt-4">
@@ -375,7 +396,7 @@ export default function DashboardPage() {
                       {" · "}
                       {activity.changedBy.firstName} {activity.changedBy.lastName}
                       {" · "}
-                      {formatRelativeTime(activity.createdAt)}
+                      {formatRelativeTime(activity.createdAt, t, locale)}
                     </p>
                   </button>
                 </div>
