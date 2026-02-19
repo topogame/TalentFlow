@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 type CandidateOption = {
@@ -26,7 +26,18 @@ type PositionOption = {
 };
 
 export default function NewProcessPage() {
+  const tc = useTranslations("common");
+  return (
+    <Suspense fallback={<div className="animate-pulse text-center text-slate-400 py-12">{tc("loading")}</div>}>
+      <NewProcessForm />
+    </Suspense>
+  );
+}
+
+function NewProcessForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedCandidateId = searchParams.get("candidateId");
   const t = useTranslations("processes");
   const tc = useTranslations("common");
 
@@ -71,6 +82,26 @@ export default function NewProcessPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Fetch pre-selected candidate from query param
+  useEffect(() => {
+    if (preselectedCandidateId && !selectedCandidate) {
+      fetch(`/api/candidates/${preselectedCandidateId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setSelectedCandidate({
+              id: data.data.id,
+              firstName: data.data.firstName,
+              lastName: data.data.lastName,
+              currentTitle: data.data.currentTitle,
+              email: data.data.email,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [preselectedCandidateId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Search candidates
   const searchCandidates = useCallback(async (query: string) => {
@@ -206,28 +237,39 @@ export default function NewProcessPage() {
           </div>
 
           {selectedCandidate ? (
-            <div className="flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-                  {selectedCandidate.firstName[0]}{selectedCandidate.lastName[0]}
+            <>
+              <div className="flex items-center justify-between rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
+                    {selectedCandidate.firstName[0]}{selectedCandidate.lastName[0]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">
+                      {selectedCandidate.firstName} {selectedCandidate.lastName}
+                    </p>
+                    {selectedCandidate.currentTitle && (
+                      <p className="text-xs text-slate-500">{selectedCandidate.currentTitle}</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-900">
-                    {selectedCandidate.firstName} {selectedCandidate.lastName}
-                  </p>
-                  {selectedCandidate.currentTitle && (
-                    <p className="text-xs text-slate-500">{selectedCandidate.currentTitle}</p>
-                  )}
-                </div>
+                {!preselectedCandidateId && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCandidate(null)}
+                    className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                  >
+                    {t("form.change")}
+                  </button>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedCandidate(null)}
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-              >
-                {t("form.change")}
-              </button>
-            </div>
+              {preselectedCandidateId && (
+                <p className="mt-2 text-xs text-indigo-600">
+                  {t("form.candidatePreselected", {
+                    name: `${selectedCandidate.firstName} ${selectedCandidate.lastName}`,
+                  })}
+                </p>
+              )}
+            </>
           ) : (
             <div ref={candidateRef} className="relative">
               <div className="relative">

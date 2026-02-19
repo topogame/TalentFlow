@@ -189,6 +189,7 @@
       },
       "processes": {
         "noProcesses": "No processes yet",
+        "addProcess": "Add to Process",
         "assignedTo": "Assigned: {name}",
         "lastUpdate": "Last update: {date}",
         "closedAt": "Closed: {date}"
@@ -550,6 +551,7 @@
       "fitnessAssessment": "Fitness Assessment",
       "fitnessScoreOptional": "Fitness Score (optional)",
       "startProcess": "Start Process",
+      "candidatePreselected": "Creating process for {name}. Select company and position.",
       "error": "An error occurred"
     }
   },

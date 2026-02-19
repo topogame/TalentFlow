@@ -189,6 +189,7 @@
       },
       "processes": {
         "noProcesses": "Henüz süreç kaydı yok",
+        "addProcess": "Sürece Ekle",
         "assignedTo": "Sorumlu: {name}",
         "lastUpdate": "Son güncelleme: {date}",
         "closedAt": "Kapandı: {date}"
@@ -550,6 +551,7 @@
       "fitnessAssessment": "Uyum Değerlendirmesi",
       "fitnessScoreOptional": "Uyum Puanı (isteğe bağlı)",
       "startProcess": "Süreç Başlat",
+      "candidatePreselected": "{name} için süreç oluşturun. Firma ve pozisyon seçin.",
       "error": "Bir hata oluştu"
     }
   },

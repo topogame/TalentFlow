@@ -284,6 +284,8 @@ model Position {
   salaryCurrency       String?          @default("TRY") @map("salary_currency") @db.VarChar(3)
   salaryType           SalaryType?      @map("salary_type")
   benefits             String?          @db.Text
+  description          String?          @db.Text
+  requirements         String?          @db.Text
   status               PositionStatus   @default(open)
   priority             PositionPriority @default(normal)
   openedAt             DateTime?        @map("opened_at") @db.Date
