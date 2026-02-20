@@ -124,7 +124,9 @@ export const createPositionSchema = z.object({
   priority: z.enum(["low", "normal", "high", "urgent"]).optional().default("normal"),
 });
 
-export const updatePositionSchema = createPositionSchema.partial();
+export const updatePositionSchema = createPositionSchema.partial().extend({
+  status: z.enum(["open", "on_hold", "closed"]).optional(),
+});
 
 // Pagination
 export const paginationSchema = z.object({

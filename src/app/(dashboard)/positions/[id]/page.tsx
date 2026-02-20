@@ -102,6 +102,7 @@ export default function PositionDetailPage() {
   const [matchError, setMatchError] = useState("");
   const [expandedCandidate, setExpandedCandidate] = useState<string | null>(null);
   const [addingToProcess, setAddingToProcess] = useState<string | null>(null);
+  const [addToProcessInfo, setAddToProcessInfo] = useState("");
 
   const STATUS_LABELS: Record<string, string> = {
     open: t("statusOpen"),
@@ -162,9 +163,17 @@ export default function PositionDetailPage() {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.error?.message || t("detail.addToProcessFailed"));
+        setAddToProcessInfo(data.error?.message || t("detail.addToProcessFailed"));
+        // Remove from list even on error (candidate already in process)
+        if (matchResults) {
+          setMatchResults({
+            ...matchResults,
+            candidates: matchResults.candidates.filter((c) => c.candidateId !== candidateId),
+          });
+        }
         return;
       }
+      setAddToProcessInfo("");
       // Remove from match results and refresh position
       if (matchResults) {
         setMatchResults({
@@ -174,7 +183,7 @@ export default function PositionDetailPage() {
       }
       fetchPosition();
     } catch {
-      alert(t("detail.addToProcessError"));
+      setAddToProcessInfo(t("detail.addToProcessError"));
     } finally {
       setAddingToProcess(null);
     }
@@ -425,6 +434,12 @@ export default function PositionDetailPage() {
               {!matchResults.aiAvailable && (
                 <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
                   {t("detail.aiNotAvailable")}
+                </div>
+              )}
+
+              {addToProcessInfo && (
+                <div className="mb-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+                  {addToProcessInfo}
                 </div>
               )}
 

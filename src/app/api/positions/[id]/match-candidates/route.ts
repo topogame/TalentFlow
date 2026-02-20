@@ -12,7 +12,7 @@ import {
   type CandidateMatchResult,
   type MatchCategory,
 } from "@/lib/ai";
-import { MAX_MATCH_CANDIDATES } from "@/lib/constants";
+import { MAX_MATCH_CANDIDATES, MIN_MATCH_SCORE, AI_MATCH_BATCH_SIZE } from "@/lib/constants";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -132,39 +132,52 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   scoredCandidates.sort((a, b) => b.ruleBasedScore - a.ruleBasedScore);
   const topCandidates = scoredCandidates.slice(0, MAX_MATCH_CANDIDATES);
 
-  // 6. AI analysis for unstructured fields
-  const aiResult = await analyzeMatchWithAI(
-    {
-      title: position.title,
-      department: position.department,
-      requiredSkills: position.requiredSkills,
-      languageRequirement: position.languageRequirement,
-      sectorPreference: position.sectorPreference,
-      description: null,
-    },
-    topCandidates.map((sc) => ({
-      id: sc.candidate.id,
-      name: `${sc.candidate.firstName} ${sc.candidate.lastName}`,
-      currentTitle: sc.candidate.currentTitle,
-      currentSector: sc.candidate.currentSector,
-      languages: sc.candidate.languages,
-    }))
+  // 6. AI analysis — batch candidates into groups for parallel processing
+  const positionSummary = {
+    title: position.title,
+    department: position.department,
+    requiredSkills: position.requiredSkills,
+    languageRequirement: position.languageRequirement,
+    sectorPreference: position.sectorPreference,
+    description: null,
+  };
+
+  const allCandidateSummaries = topCandidates.map((sc) => ({
+    id: sc.candidate.id,
+    name: `${sc.candidate.firstName} ${sc.candidate.lastName}`,
+    currentTitle: sc.candidate.currentTitle,
+    currentSector: sc.candidate.currentSector,
+    languages: sc.candidate.languages,
+  }));
+
+  // Split into batches of AI_MATCH_BATCH_SIZE and run in parallel
+  const batches: typeof allCandidateSummaries[] = [];
+  for (let i = 0; i < allCandidateSummaries.length; i += AI_MATCH_BATCH_SIZE) {
+    batches.push(allCandidateSummaries.slice(i, i + AI_MATCH_BATCH_SIZE));
+  }
+
+  const batchResults = await Promise.allSettled(
+    batches.map((batch) => analyzeMatchWithAI(positionSummary, batch, 1000))
   );
 
-  // 7. Build AI scores map with fallback
+  // 7. Build AI scores map — merge all successful batch results
   const aiScoresMap = new Map<string, {
     skills: { score: number; explanation: string };
     language: { score: number; explanation: string };
     sector: { score: number; explanation: string };
   }>();
 
-  if (aiResult.success) {
-    for (const r of aiResult.data.results) {
-      aiScoresMap.set(r.candidateId, {
-        skills: r.skills,
-        language: r.language,
-        sector: r.sector,
-      });
+  let anyBatchSuccess = false;
+  for (const result of batchResults) {
+    if (result.status === "fulfilled" && result.value.success) {
+      anyBatchSuccess = true;
+      for (const r of result.value.data.results) {
+        aiScoresMap.set(r.candidateId, {
+          skills: r.skills,
+          language: r.language,
+          sector: r.sector,
+        });
+      }
     }
   }
 
@@ -199,15 +212,16 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     };
   });
 
-  // 9. Sort by overall score descending
-  results.sort((a, b) => b.overallScore - a.overallScore);
+  // 9. Filter by minimum score threshold and sort
+  const filteredResults = results.filter((r) => r.overallScore >= MIN_MATCH_SCORE);
+  filteredResults.sort((a, b) => b.overallScore - a.overallScore);
 
   return NextResponse.json(
     successResponse({
       positionId: id,
-      candidates: results,
+      candidates: filteredResults,
       generatedAt: new Date().toISOString(),
-      aiAvailable: aiResult.success,
+      aiAvailable: anyBatchSuccess,
     })
   );
 }

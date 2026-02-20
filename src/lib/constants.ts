@@ -140,6 +140,8 @@ export const EDUCATION_HIERARCHY: Record<string, number> = {
 };
 
 export const MAX_MATCH_CANDIDATES = 20;
+export const MIN_MATCH_SCORE = 40;
+export const AI_MATCH_BATCH_SIZE = 5;
 
 // ─── Audit Log ───
 export const AUDIT_ACTIONS = [

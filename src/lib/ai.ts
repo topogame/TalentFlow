@@ -497,7 +497,8 @@ type PositionSummary = {
 
 export async function analyzeMatchWithAI(
   position: PositionSummary,
-  candidates: CandidateSummary[]
+  candidates: CandidateSummary[],
+  maxTokens: number = 3000
 ): Promise<{ success: true; data: AIMatchResult } | { success: false; error: string }> {
   if (candidates.length === 0) {
     return { success: true, data: { results: [] } };
@@ -530,7 +531,7 @@ export async function analyzeMatchWithAI(
   try {
     const response = await getAnthropic().messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 3000,
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: userMessage }],
     });
 

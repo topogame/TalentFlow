@@ -104,6 +104,7 @@ export default function EditPositionPage() {
       educationRequirement: formData.get("educationRequirement") || undefined,
       languageRequirement: formData.get("languageRequirement") || undefined,
       priority: formData.get("priority") || "normal",
+      status: formData.get("status") || undefined,
     };
 
     try {
@@ -227,6 +228,14 @@ export default function EditPositionPage() {
                 <option value="normal">{t("priorityNormal")}</option>
                 <option value="high">{t("priorityHigh")}</option>
                 <option value="urgent">{t("priorityUrgent")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">{tc("status")}</label>
+              <select name="status" defaultValue={position.status} className={inputClass}>
+                <option value="open">{t("statusOpen")}</option>
+                <option value="on_hold">{t("statusOnHold")}</option>
+                <option value="closed">{t("statusClosed")}</option>
               </select>
             </div>
             <div>
