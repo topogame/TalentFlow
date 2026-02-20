@@ -756,7 +756,32 @@
       "uploadError": "Yükleme sırasında bir hata oluştu",
       "analyzeFailed": "CV analiz edilemedi",
       "analyzeError": "CV analizi sırasında bir hata oluştu",
-      "analyzing": "CV analiz ediliyor..."
+      "analyzing": "CV analiz ediliyor...",
+      "fileEmpty": "Dosya boş, lütfen geçerli bir CV yükleyin."
+    },
+    "cvAnalysis": {
+      "title": "CV ile Bilgileri Güncelle",
+      "description": "CV yükleyerek adayın bilgilerini AI ile güncelleyin",
+      "previewTitle": "AI Analiz Sonucu",
+      "previewDescription": "Güncellenecek alanları seçin",
+      "applyChanges": "Değişiklikleri Uygula",
+      "updating": "Güncelleniyor...",
+      "updateSuccess": "Aday bilgileri başarıyla güncellendi",
+      "updateFailed": "Güncelleme başarısız",
+      "noChanges": "AI analizinden yeni bilgi bulunamadı",
+      "fieldFirstName": "Ad",
+      "fieldLastName": "Soyad",
+      "fieldEmail": "E-posta",
+      "fieldPhone": "Telefon",
+      "fieldTitle": "Mevcut Pozisyon",
+      "fieldSector": "Sektör",
+      "fieldExperience": "Deneyim (Yıl)",
+      "fieldEducation": "Eğitim Seviyesi",
+      "fieldUniversity": "Üniversite",
+      "fieldDepartment": "Bölüm",
+      "fieldCity": "Şehir",
+      "fieldCountry": "Ülke",
+      "fieldLanguages": "Diller"
     },
     "linkedinPaste": {
       "title": "LinkedIn Profil Yapıştır",

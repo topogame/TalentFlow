@@ -9,6 +9,34 @@ function getAnthropic(): Anthropic {
   return _anthropic;
 }
 
+// ─── Retry Helper ───
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  baseDelayMs: number = 1000
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const isRetryable =
+        msg.includes("529") ||
+        msg.includes("overloaded") ||
+        msg.includes("rate_limit") ||
+        msg.includes("500") ||
+        msg.includes("503");
+      if (!isRetryable || attempt === maxRetries) throw err;
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+}
+
 // ─── Types ───
 
 const cvParseResultSchema = z.object({
@@ -143,16 +171,18 @@ export async function parseLinkedInProfile(
   text: string
 ): Promise<{ success: true; data: CVParseResult } | { success: false; error: string }> {
   try {
-    const response = await getAnthropic().messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: `${LINKEDIN_EXTRACTION_PROMPT}\n\n--- LİNKEDIN PROFİL ---\n${text}`,
-        },
-      ],
-    });
+    const response = await withRetry(() =>
+      getAnthropic().messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "user",
+            content: `${LINKEDIN_EXTRACTION_PROMPT}\n\n--- LİNKEDIN PROFİL ---\n${text}`,
+          },
+        ],
+      })
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
@@ -251,16 +281,18 @@ export async function parseJobPosting(
   text: string
 ): Promise<{ success: true; data: JobPostingParseResult } | { success: false; error: string }> {
   try {
-    const response = await getAnthropic().messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: `${JOB_POSTING_EXTRACTION_PROMPT}\n\n--- İŞ İLANI ---\n${text}`,
-        },
-      ],
-    });
+    const response = await withRetry(() =>
+      getAnthropic().messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "user",
+            content: `${JOB_POSTING_EXTRACTION_PROMPT}\n\n--- İŞ İLANI ---\n${text}`,
+          },
+        ],
+      })
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
@@ -529,11 +561,13 @@ export async function analyzeMatchWithAI(
   const userMessage = `${MATCH_ANALYSIS_PROMPT}\n\n--- POZİSYON ---\n${positionText}\n\n--- ADAYLAR ---\n${candidatesText}`;
 
   try {
-    const response = await getAnthropic().messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: userMessage }],
-    });
+    const response = await withRetry(() =>
+      getAnthropic().messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: userMessage }],
+      })
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
@@ -584,26 +618,28 @@ export async function parseCVFromPDF(
   base64Content: string
 ): Promise<{ success: true; data: CVParseResult } | { success: false; error: string }> {
   try {
-    const response = await getAnthropic().messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: base64Content,
+    const response = await withRetry(() =>
+      getAnthropic().messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: base64Content,
+                },
               },
-            },
-            { type: "text", text: CV_EXTRACTION_PROMPT },
-          ],
-        },
-      ],
-    });
+              { type: "text", text: CV_EXTRACTION_PROMPT },
+            ],
+          },
+        ],
+      })
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
@@ -626,16 +662,18 @@ export async function parseCVFromText(
   textContent: string
 ): Promise<{ success: true; data: CVParseResult } | { success: false; error: string }> {
   try {
-    const response = await getAnthropic().messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      messages: [
-        {
-          role: "user",
-          content: `${CV_EXTRACTION_PROMPT}\n\n--- CV İÇERİĞİ ---\n${textContent}`,
-        },
-      ],
-    });
+    const response = await withRetry(() =>
+      getAnthropic().messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        messages: [
+          {
+            role: "user",
+            content: `${CV_EXTRACTION_PROMPT}\n\n--- CV İÇERİĞİ ---\n${textContent}`,
+          },
+        ],
+      })
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {

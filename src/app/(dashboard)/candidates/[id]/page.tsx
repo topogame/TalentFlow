@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { PIPELINE_STAGE_LABELS, STAGE_COLORS } from "@/lib/constants";
 import DocumentUpload from "@/components/document-upload";
+import CandidateCVAnalysis from "@/components/candidate-cv-analysis";
 
 type Candidate = {
   id: string;
@@ -513,6 +514,7 @@ export default function CandidateDetailPage() {
 
         {activeTab === "documents" && (
           <div>
+            <CandidateCVAnalysis candidateId={candidate.id} onUpdated={fetchCandidate} />
             <DocumentUpload candidateId={candidate.id} onUploaded={fetchCandidate} />
             {candidate.documents.length === 0 ? (
               <div className="py-8 text-center">

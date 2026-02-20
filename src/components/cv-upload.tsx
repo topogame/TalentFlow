@@ -43,6 +43,9 @@ export default function CVUpload({ onParsed, onFileUploaded, disabled }: CVUploa
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return t("cvUpload.unsupportedFormat");
     }
+    if (f.size === 0) {
+      return t("cvUpload.fileEmpty");
+    }
     if (f.size > MAX_SIZE) {
       return t("cvUpload.fileTooLarge");
     }

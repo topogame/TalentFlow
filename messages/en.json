@@ -756,7 +756,32 @@
       "uploadError": "An error occurred during upload",
       "analyzeFailed": "CV could not be analyzed",
       "analyzeError": "An error occurred during CV analysis",
-      "analyzing": "Analyzing CV..."
+      "analyzing": "Analyzing CV...",
+      "fileEmpty": "File is empty, please upload a valid CV."
+    },
+    "cvAnalysis": {
+      "title": "Update Info with CV",
+      "description": "Update candidate information with AI by uploading CV",
+      "previewTitle": "AI Analysis Result",
+      "previewDescription": "Select fields to update",
+      "applyChanges": "Apply Changes",
+      "updating": "Updating...",
+      "updateSuccess": "Candidate information updated successfully",
+      "updateFailed": "Update failed",
+      "noChanges": "No new information found from AI analysis",
+      "fieldFirstName": "First Name",
+      "fieldLastName": "Last Name",
+      "fieldEmail": "Email",
+      "fieldPhone": "Phone",
+      "fieldTitle": "Current Position",
+      "fieldSector": "Sector",
+      "fieldExperience": "Experience (Years)",
+      "fieldEducation": "Education Level",
+      "fieldUniversity": "University",
+      "fieldDepartment": "Department",
+      "fieldCity": "City",
+      "fieldCountry": "Country",
+      "fieldLanguages": "Languages"
     },
     "linkedinPaste": {
       "title": "Paste LinkedIn Profile",

@@ -9,6 +9,14 @@ export async function POST(request: NextRequest) {
   const { session, error } = await requireAuth();
   if (error) return error;
 
+  // Pre-flight: check Vercel Blob token
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      errorResponse("CONFIG_ERROR", "Dosya depolama servisi yapılandırılmamış. BLOB_READ_WRITE_TOKEN eksik."),
+      { status: 500 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file");
@@ -29,10 +37,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate empty file
+    if (file.size === 0) {
+      return NextResponse.json(
+        errorResponse("VALIDATION_ERROR", "Dosya boş, lütfen geçerli bir dosya yükleyin."),
+        { status: 400 }
+      );
+    }
+
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        errorResponse("VALIDATION_ERROR", "Dosya boyutu 10MB'ı aşamaz"),
+        errorResponse("VALIDATION_ERROR", `Dosya boyutu 10MB'ı aşamaz (yüklenen: ${(file.size / (1024 * 1024)).toFixed(1)} MB)`),
         { status: 400 }
       );
     }
@@ -82,8 +98,16 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("Document upload error:", err);
+    const message = err instanceof Error ? err.message : "Bilinmeyen hata";
+    // Surface specific error types
+    if (message.includes("token") || message.includes("unauthorized") || message.includes("BlobAccessError")) {
+      return NextResponse.json(
+        errorResponse("BLOB_AUTH_ERROR", "Dosya depolama yetkilendirme hatası. Lütfen yönetici ile iletişime geçin."),
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
-      errorResponse("SERVER_ERROR", "Dosya yüklenemedi"),
+      errorResponse("SERVER_ERROR", `Dosya yüklenemedi: ${message}`),
       { status: 500 }
     );
   }
